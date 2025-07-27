@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>기초학력 향상 점검 도구</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f7f9fc;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #2c3e50;
+      color: white;
+      padding: 15px 20px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+    #backButton {
+      font-size: 20px;
+      padding: 6px 12px;
+      background: #ecf0f1;
+      color: #2c3e50;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #backButton.hidden {
+      display: none;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-gap: 20px;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .grid-container.single {
+      grid-template-columns: 1fr;
+    }
+
+    .select-mode {
+      font-size: 20px;
+      padding: 20px;
+      background: white;
+      border: 2px solid #2c3e50;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .select-mode:hover {
+      background: #2c3e50;
+      color: white;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    iframe {
+      width: 100%;
+      height: 90vh;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>기초학력 향상 점검 도구</h1>
+    <button id="backButton" class="hidden" onclick="goBack()" aria-label="홈으로">↩</button>
+  </header>
+
+  <div id="modeSelection">
+    <div class="grid-container">
+      <button class="select-mode" onclick="showChecklist('literacy')">문해력</button>
+      <button class="select-mode" onclick="showChecklist('numeracy')">수리력</button>
+      <button class="select-mode" onclick="showChecklist('numAtt')">수리 학습 태도</button>
+      <button class="select-mode" onclick="showChecklist('litAtt')">문해 학습 태도</button>
+    </div>
+    <div class="grid-container single">
+      <button class="select-mode" onclick="showChecklist('socEmo')">사회정서 역량</button>
+    </div>
+  </div>
+
+  <div id="literacySection" class="hidden">
+    <iframe src="문해력 체크리스트 프로토타입 (250726).html"></iframe>
+  </div>
+  <div id="numeracySection" class="hidden">
+    <iframe src="수리력 체크리스트 프로토타입 (250726).html"></iframe>
+  </div>
+  <div id="numAttSection" class="hidden">
+    <iframe src="수리학습태도 체크리스트 프로토타입 (250726).html"></iframe>
+  </div>
+  <div id="litAttSection" class="hidden">
+    <iframe src="문해학습태도 체크리스트 프로토타입 (250726).html"></iframe>
+  </div>
+  <div id="socEmoSection" class="hidden">
+    <iframe src="사회정서 체크리스트 프로토타입 (250726).html"></iframe>
+  </div>
+
+  <script>
+    function showChecklist(type) {
+      document.getElementById('modeSelection').classList.add('hidden');
+      document.getElementById('backButton').classList.remove('hidden');
+
+      const sections = ['literacy', 'numeracy', 'numAtt', 'litAtt', 'socEmo'];
+      sections.forEach(section => {
+        const el = document.getElementById(section + 'Section');
+        if (el) el.classList.add('hidden');
+      });
+
+      const target = document.getElementById(type + 'Section');
+      if (target) target.classList.remove('hidden');
+    }
+
+    function goBack() {
+      document.getElementById('modeSelection').classList.remove('hidden');
+      document.getElementById('backButton').classList.add('hidden');
+
+      const sections = ['literacy', 'numeracy', 'numAtt', 'litAtt', 'socEmo'];
+      sections.forEach(section => {
+        const el = document.getElementById(section + 'Section');
+        if (el) el.classList.add('hidden');
+      });
+    }
+  </script>
+</body>
+</html>

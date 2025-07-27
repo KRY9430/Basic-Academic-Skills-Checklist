@@ -1,0 +1,239 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+</script>
+<meta charset="UTF-8">
+<title>사회정서 역량 향상 점검 도구</title>
+<style>
+.tooltip { position: relative; display: inline-block; cursor: help; }
+.tooltip .tooltiptext { visibility: hidden; width: 400px; background: #f9f9f9; color: #000; border: 1px solid #ccc; padding: 8px; border-radius: 4px; position: absolute; z-index: 1; top: 100%; left: 0; white-space: pre-line; }
+.tooltip:hover .tooltiptext { visibility: visible; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  table-layout: fixed; /* 열 너비를 colgroup 기준으로 고정 */
+}
+th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
+th { background: #f2f2f2; }
+.control-panel { margin: 10px 0; }
+th:nth-child(1), td:nth-child(1),
+th:nth-child(2), td:nth-child(2) {
+  width: 80px;           /* 좁은 너비 */
+  white-space: normal;   /* 줄바꿈 허용 */
+  word-break: keep-all;  /* 단어 중간에서 줄바꿈 안 함 (띄어쓰기 기준으로만 줄바꿈) */
+}
+</style>
+</head>
+<body>
+<h2>사회정서 역량 향상 점검 도구</h2>
+<button onclick="resetFilter()">초기화</button>
+<table id="checklistTable">
+  <colgroup>
+    <col style="width: 80px;">
+    <col style="width: 60px;">
+    <col>
+    <col style="width: 120px;">
+    <col style="width: 120px;">
+    <col style="width: 120px;">
+    <col style="width: 120px;">
+  </colgroup>
+   <thead>
+    <tr>
+     <th colspan="1" rowspan="2">
+      영역
+     </th>
+     <th colspan="1" rowspan="2">
+      번호
+     </th>
+     <th colspan="1" rowspan="2">
+      문항
+     </th>
+     <th colspan="4" rowspan="1">
+      수준
+     </th>
+    </tr>
+    <tr>
+     <th>
+      전혀 그렇지 않다
+     </th>
+     <th>
+      그렇지 않다
+     </th>
+     <th>
+      그렇다
+     </th>
+     <th>
+      매우 그렇다
+     </th>
+    </tr>
+   </thead><tbody id="tableBody">
+</tbody>
+</table>
+<div style="margin-top:10px;">
+<button onclick="exportExcel()">엑셀로 저장</button>
+</div>
+<script>
+let previousStates = {};
+const data = [
+ {'영역': '대인 관계 기술', '번호': 1, '문항': '▪  학급에서 몇몇 친구와 함께 활동하거나 자연스럽게 어울린다.'},
+ {'영역': '대인 관계 기술', '번호': 2, '문항': '▪  다른 친구의 말이나 발표를 주의 깊게 듣고 반응하는 모습을 보인다.'},
+ {'영역': '대인 관계 기술', '번호': 3, '문항': '▪  교사 또는 친구와 적절하게 눈을 맞추며 말하거나 의사 표현한다.'},
+ {'영역': '대인 관계 기술', '번호': 4, '문항': '▪  짝 활동이나 그룹 활동에서 협력하며, 자신의 역할을 수행하려 한다.'},
+ {'영역': '대인 관계 기술', '번호': 5, '문항': '▪  친구가 도움을 요청할 때, 거절하지 않고 반응하려는 태도를 보인다.'},
+ {'영역': '책임 있는 행동', '번호': 6, '문항': '▪  학급의 규칙을 지키며 생활하려는 태도를 보인다.'},
+ {'영역': '책임 있는 행동', '번호': 7, '문항': '▪  실수나 잘못을 인정하고, 수정하려는 자세를 보인다.'},
+ {'영역': '책임 있는 행동', '번호': 8, '문항': '▪  함께 사용하는 물건이나 공간을 소중히 다루는 모습을 보인다.'},
+ {'영역': '책임 있는 행동', '번호': 9, '문항': '▪  친구나 교사에게 불편함을 주었을 때 자기 행동을 돌아보고 사과하려는 태도를 보인다.'},
+ {'영역': '책임 있는 행동', '번호': 10, '문항': '▪  활동 중 정해진 순서를 지키거나, 차례를 기다리려는 태도를 보인다.'},
+ {'영역': '정서 표현', '번호': 11, '문항': '▪  자신의 기분이나 감정을 말이나 표정, 행동으로 표현한다.'},
+ {'영역': '정서 표현', '번호': 12, '문항': '▪  속상하거나 화가 났을 때, 그 이유를 말로 설명한다.'},
+ {'영역': '정서 표현', '번호': 13, '문항': '▪  다른 사람의 감정에 대해 공감하는 반응을 보인다.'},
+ {'영역': '정서 표현', '번호': 14, '문항': '▪  학습 중 불편한 상황이 생기면 말로 기분을 표현하려고 한다.'},
+ {'영역': '정서 표현', '번호': 15, '문항': '▪  다양한 감정(예: 즐거움, 긴장, 두려움 등)을 적절하게 표현하려고 한다.'},
+ {'영역': '정서 조절', '번호': 16, '문항': '▪  실수하거나 실패했을 때, 스스로를 진정시키고 다시 참여하려 한다.'},
+ {'영역': '정서 조절', '번호': 17, '문항': '▪  수업 중 불안하거나 긴장되는 순간에도 침착하려 한다.'},
+ {'영역': '정서 조절', '번호': 18, '문항': '▪  화가 날 때, 바로 말하거나 행동하지 않고 생각을 정리하려는 모습을 보인다.'},
+ {'영역': '정서 조절', '번호': 19, '문항': '▪  짜증이 나거나 속이 상해도 표정이나 말투를 조절하려는 태도를 보인다.'},
+ {'영역': '정서 조절', '번호': 20, '문항': '▪  힘들거나 감정이 복잡할 때, 나만의 방법(예: 천천히 숨쉬기 등)을 사용해 기분을 가라앉히려 노력한다.'},
+ {'영역': '자기 관리', '번호': 21, '문항': '▪  주어진 과제를 포기하지 않고 끝까지 하려고 한다.'},
+ {'영역': '자기 관리', '번호': 22, '문항': '▪  수업 중 주의가 산만해질 때, 스스로 태도를 조절하여 집중하려는 태도를 보인다.'},
+ {'영역': '자기 관리', '번호': 23, '문항': '▪  실수나 실패 이후에도 다시 시도하거나, 교사나 친구의 도움을 받아 과제를 해결하려 한다.'},
+ {'영역': '자기 관리', '번호': 24, '문항': '▪  활동 도중 다른 일에 주의를 빼앗기지 않고 주어진 역할이나 과제를 유지하려 한다.'},
+ {'영역': '자기 관리', '번호': 25, '문항': '▪  수업 전후 필요한 준비물을 스스로 챙기거나 정리하며 수업 참여를 지속하려는 태도를 보인다.'}
+];
+
+function generateTable() {
+    const tbody = document.getElementById('tableBody');
+    const checkedGrades = Array.from(document.querySelectorAll('.gradeFilter:checked')).map(cb => cb.value);
+
+    // Save previous states using key -> {selectedValue, reason}
+    
+    document.querySelectorAll("#tableBody tr").forEach(row => {
+        const tds = row.querySelectorAll("td");
+        if (tds.length < 4) return;
+        const key = tds[0].innerText.trim() + "|" + tds[1].innerText.trim() + "|" + tds[2].innerText.trim() + "|" + tds[3].innerText.trim();
+        let selectedValue = "";
+        row.querySelectorAll("input[type='radio']").forEach(input => {
+            if (input.checked) selectedValue = input.value;
+        });
+        const reasonInput = row.querySelector("input[type='text']");
+        const reason = reasonInput ? reasonInput.value.trim() : "";
+        previousStates[key] = { selectedValue, reason };
+    });
+
+    tbody.innerHTML = "";
+    const filtered = data;
+    filtered.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        const key = item['영역'] + "|" + item['번호'] + "|" + item['문항'];
+        tr.innerHTML = `
+<td>${item['영역']}</td>
+<td>${item['번호']}</td>
+<td style="text-align:left;">
+  <div class="tooltip">
+    ${item['문항']}
+  </div>
+</td>
+<td><input type="radio" value="전혀 그렇지 않다"></td>
+<td><input type="radio" value="그렇지 않다"></td>
+<td><input type="radio" value="그렇다"></td>
+<td><input type="radio" value="매우 그렇다"></td>
+`;
+        tbody.appendChild(tr);
+
+    });
+    const rows = Array.from(document.querySelectorAll('#checklistTable tbody tr'));
+    const visible = rows.map(row => row.style.display !== 'none');
+
+    // Helper to get cell text
+    function cellText(row, idx) {
+        return row.children[idx].innerText.trim();
+    }
+
+    // mergeColumn 함수 정의
+    function mergeColumn(colIdx, sameGroup) {
+        let lastVisibleRow = null;
+        let span = 1;
+
+        rows.forEach((row, i) => {
+            const currentCell = row.children[colIdx];
+            currentCell.rowSpan = 1;
+            currentCell.style.display = "";
+
+            if (!lastVisibleRow) {
+                lastVisibleRow = row;
+                span = 1;
+                return;
+            }
+
+            if (cellText(row, colIdx) === cellText(lastVisibleRow, colIdx) && sameGroup(row, i, lastVisibleRow)) {
+                span++;
+                currentCell.style.display = "none";
+                lastVisibleRow.children[colIdx].rowSpan = span;
+            } else {
+                lastVisibleRow = row;
+                span = 1;
+            }
+        });
+    }
+
+    // 영역(col0) 병합
+    mergeColumn(0, ()=>true);
+}
+
+function resetFilter() {
+    location.reload(); // 페이지를 새로고침하여 병합된 셀 구조 유지 및 입력값 완전 초기화
+}
+
+document.addEventListener('DOMContentLoaded', generateTable);
+
+
+function exportExcel() {
+    const wb = XLSX.utils.book_new();
+    const ws_data = [["영역","번호","문항","전혀 그렇지 않다","그렇지 않다","그렇다","매우 그렇다"]];
+
+    const rows = document.querySelectorAll("#tableBody tr");
+    let currentArea = "";
+    let currentGrade = "";
+
+    rows.forEach(row => {
+        if (row.style.display === "none") return;
+
+        const tds = row.querySelectorAll("td");
+        if (tds.length < 7) return;
+
+        const areaText = tds[0].innerText.trim();
+        if (areaText !== "") currentArea = areaText;
+
+        const gradeText = tds[1].innerText.trim();
+        if (gradeText !== "") currentGrade = gradeText;
+
+        const content = tds[2].innerText.trim();
+
+        const levelIndicators = [];
+        for (let i = 3; i <= 6; i++) {
+            const input = tds[i].querySelector("input[type='radio']");
+            levelIndicators.push(input && input.checked ? "V" : "");
+        }
+
+        ws_data.push([
+            currentArea,
+            currentGrade,
+            content,
+            ...levelIndicators
+        ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, "사회정서 역량 향상 점검 도구");
+    XLSX.writeFile(wb, "사회정서_역량_향상_점검_결과.xlsx");
+}
+
+</script>
+
+</body>
+
+</html>
