@@ -84,8 +84,8 @@
     <div class="grid-container">
       <button class="select-mode" onclick="showChecklist('literacy')">문해력</button>
       <button class="select-mode" onclick="showChecklist('numeracy')">수리력</button>
-      <button class="select-mode" onclick="showChecklist('numAtt')">수리 학습 태도</button>
       <button class="select-mode" onclick="showChecklist('litAtt')">문해 학습 태도</button>
+      <button class="select-mode" onclick="showChecklist('numAtt')">수리 학습 태도</button>
     </div>
     <div class="grid-container single">
       <button class="select-mode" onclick="showChecklist('socEmo')">사회정서 역량</button>
@@ -98,11 +98,11 @@
   <div id="numeracySection" class="hidden">
     <iframe src="수리력 체크리스트 프로토타입 (250726).html"></iframe>
   </div>
-  <div id="numAttSection" class="hidden">
-    <iframe src="수리학습태도 체크리스트 프로토타입 (250726).html"></iframe>
-  </div>
   <div id="litAttSection" class="hidden">
     <iframe src="문해학습태도 체크리스트 프로토타입 (250726).html"></iframe>
+  </div>
+  <div id="numAttSection" class="hidden">
+    <iframe src="수리학습태도 체크리스트 프로토타입 (250726).html"></iframe>
   </div>
   <div id="socEmoSection" class="hidden">
     <iframe src="사회정서 체크리스트 프로토타입 (250726).html"></iframe>
@@ -113,7 +113,7 @@
       document.getElementById('modeSelection').classList.add('hidden');
       document.getElementById('backButton').classList.remove('hidden');
 
-      const sections = ['literacy', 'numeracy', 'numAtt', 'litAtt', 'socEmo'];
+      const sections = ['literacy', 'numeracy', 'litAtt', 'numAtt', 'socEmo'];
       sections.forEach(section => {
         const el = document.getElementById(section + 'Section');
         if (el) el.classList.add('hidden');
@@ -127,7 +127,7 @@
       document.getElementById('modeSelection').classList.remove('hidden');
       document.getElementById('backButton').classList.add('hidden');
 
-      const sections = ['literacy', 'numeracy', 'numAtt', 'litAtt', 'socEmo'];
+      const sections = ['literacy', 'numeracy', 'litAtt', 'numAtt', 'socEmo'];
       sections.forEach(section => {
         const el = document.getElementById(section + 'Section');
         if (el) el.classList.add('hidden');
