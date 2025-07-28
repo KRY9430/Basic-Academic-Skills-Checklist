@@ -778,9 +778,9 @@ function generateTable() {
     <span class="tooltiptext">${item['세부 점검 요소']}</span>
   </div>
 </td>
-<td><input type="radio" value="미도달"></td>
-<td><input type="radio" value="도달"></td>
-<td><input type="radio" value="관찰 보류"></td>
+<td><input type="radio" name="radio_${idx}" value="미도달"></td>
+<td><input type="radio" name="radio_${idx}" value="도달"></td>
+<td><input type="radio" name="radio_${idx}" value="관찰 보류"></td>
 <td><input type="text" style="width:95%;"></td>
 <td><button onclick="downloadResource()">&#x2B07;</button></td>
 `;

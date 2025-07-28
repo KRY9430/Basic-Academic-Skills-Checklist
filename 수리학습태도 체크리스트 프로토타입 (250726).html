@@ -126,10 +126,10 @@ function generateTable() {
     ${item['문항']}
   </div>
 </td>
-<td><input type="radio" value="전혀 그렇지 않다"></td>
-<td><input type="radio" value="그렇지 않다"></td>
-<td><input type="radio" value="그렇다"></td>
-<td><input type="radio" value="매우 그렇다"></td>
+<td><input type="radio" name="radio_${idx}" value="전혀 그렇지 않다"></td>
+<td><input type="radio" name="radio_${idx}" value="그렇지 않다"></td>
+<td><input type="radio" name="radio_${idx}" value="그렇다"></td>
+<td><input type="radio" name="radio_${idx}" value="매우 그렇다"></td>
 `;
         tbody.appendChild(tr);
 
