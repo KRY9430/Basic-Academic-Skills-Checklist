@@ -51,9 +51,6 @@ th:nth-child(2), td:nth-child(2) {
       도달 여부
      </th>
      <th colspan="1" rowspan="2">
-      관찰 보류
-     </th>
-     <th colspan="1" rowspan="2">
       평정 근거
      </th>
      <th colspan="1" rowspan="2">
@@ -675,7 +672,6 @@ function generateTable() {
 </td>
 <td><input type="radio" name="radio_${idx}" value="미도달"></td>
 <td><input type="radio" name="radio_${idx}" value="도달"></td>
-<td><input type="radio" name="radio_${idx}" value="관찰 보류"></td>
 <td><input type="text" style="width:95%;"></td>
 <td><button onclick="downloadResource()">&#x2B07;</button></td>
 `;
@@ -739,7 +735,7 @@ function downloadResource() {
 
 function exportExcel() {
     const wb = XLSX.utils.book_new();
-    const ws_data = [["영역","학년군","하위 요소","점검 항목","미도달","도달","관찰 보류","평정 근거"]];
+    const ws_data = [["영역","학년군","하위 요소","점검 항목","미도달","도달","평정 근거"]];
 
     const rows = document.querySelectorAll("#tableBody tr");
     let currentArea = "";
@@ -749,7 +745,7 @@ function exportExcel() {
         if (row.style.display === "none") return;
 
         const tds = row.querySelectorAll("td");
-        if (tds.length < 9) return;
+        if (tds.length < 8) return;
 
         const areaText = tds[0].innerText.trim();
         if (areaText !== "") currentArea = areaText;
@@ -768,10 +764,7 @@ function exportExcel() {
             levelIndicators.push(input && input.checked ? "V" : "");
         }
 
-        const observeInput = tds[6].querySelector("input[type='radio']");
-        const observeChecked = observeInput && observeInput.checked ? "V" : "";
-
-        const reasonInput = tds[7].querySelector("input[type='text']");
+        const reasonInput = tds[6].querySelector("input[type='text']");
         const reason = reasonInput ? reasonInput.value.trim() : "";
 
         ws_data.push([
@@ -780,7 +773,6 @@ function exportExcel() {
             currentCore,
             content,
             ...levelIndicators,
-            observeChecked,
             reason
         ]);
     });
