@@ -778,8 +778,8 @@ function generateTable() {
 <td><input type="radio" name="radio_${idx}" value="미도달"></td>
 <td><input type="radio" name="radio_${idx}" value="도달"></td>
 <td>
-  <div style="display: flex; align-items: center; gap: 6px;">
-    <select style="flex: 0 0 60px;">
+<div style="display: flex; align-items: center; gap: 4px; max-width: 230px;">
+  <select style="flex: 0 0 60px; min-width: 50px;">
       <option value="">선택</option>
       <option value="① 이전 검사 결과 분석">① 이전 검사 결과 분석</option>
       <option value="② 신규 검사 시행">② 신규 검사 시행</option>
@@ -788,7 +788,7 @@ function generateTable() {
       <option value="⑤ 생활지도 중 관찰">⑤ 생활지도 중 관찰</option>
       <option value="⑥ 기타">⑥ 기타</option>
     </select>
-    <input type="text" style="flex: 1;">
+    <input type="text" style="flex: 1 1 auto; min-width: 0;">
   </div>
 </td>
 <td><button onclick="downloadResource()">&#x2B07;</button></td>
