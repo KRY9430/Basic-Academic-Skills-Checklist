@@ -25,53 +25,167 @@ th:nth-child(2), td:nth-child(2) {
   white-space: normal;   /* 줄바꿈 허용 */
   word-break: keep-all;  /* 단어 중간에서 줄바꿈 안 함 (띄어쓰기 기준으로만 줄바꿈) */
 }
+:root{
+  --radius: 14px;
+  --border: #e5e7eb;
+  --bg: #ffffff;
+  --bg-alt: #fafafa;
+  --bg-hover: #f6faff;
+  --head-bg: #f8fafc;
+  --head-text: #0f172a;
+  --text: #111827;
+  --shadow: 0 6px 20px rgba(0,0,0,.06);
+}
+
+body{ color:var(--text); }
+
+.table-wrap{
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: auto;          /* 모바일·소화면 가로 스크롤 */
+}
+
+/* 둥근 모서리 & 고정 헤더를 위한 설정 */
+table.pretty{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+/* 셀 기본 */
+.pretty th,
+.pretty td{
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  word-break: keep-all;
+}
+
+/* 헤더 */
+.pretty thead th{
+  position: sticky; top: 0; z-index: 2;
+  background: var(--head-bg);
+  color: var(--head-text);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: saturate(180%) blur(4px);
+}
+
+/* 지그재그 스트라이프 + 호버 하이라이트 */
+.pretty tbody tr:nth-child(even){ background: var(--bg-alt); }
+.pretty tbody tr:hover td{ background: var(--bg-hover); }
+
+/* 첫·마지막 셀의 둥근 모서리 (첫 행/마지막 행) */
+.pretty thead tr:first-child th:first-child{ border-top-left-radius: var(--radius); }
+.pretty thead tr:first-child th:last-child{ border-top-right-radius: var(--radius); }
+.pretty tbody tr:last-child td:first-child{ border-bottom-left-radius: var(--radius); }
+.pretty tbody tr:last-child td:last-child{ border-bottom-right-radius: var(--radius); }
+
+/* 첫 번째·세 번째 열 가독성 개선 */
+.pretty th:nth-child(1), .pretty td:nth-child(1),
+.pretty th:nth-child(2), .pretty td:nth-child(2){ width: 84px; }
+.pretty td:nth-child(3){ text-align: left; }
+
+/* 라디오 입력 크게 & 간격 */
+.pretty td input[type="radio"]{
+  width: 18px; height: 18px;
+  transform: translateY(1px);
+  cursor: pointer;
+  accent-color: #2563eb; /* 지원 브라우저에서 파란 포커스 */
+}
+.pretty td input[type="radio"] + label{
+  margin-left: 6px;
+}
+
+/* 툴팁 더 보기 좋게 */
+.tooltip{ position: relative; display: inline-block; cursor: help; }
+.tooltip .tooltiptext{
+  visibility: hidden;
+  max-width: 520px;        /* 내용 길이에 맞춰 커지도록 최대폭만 지정 */
+  background: #fff;
+  color: #111827;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: 10px;
+  position: absolute; z-index: 10;
+  top: calc(100% + 8px); left: 0;
+  white-space: pre-line;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  opacity: 0; transform: translateY(-2px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.tooltip:hover .tooltiptext{
+  visibility: visible;
+  opacity: 1; transform: translateY(0);
+}
+
+/* 작은 화면 최적화 */
+@media (max-width: 760px){
+  .pretty th, .pretty td{ padding: 10px 10px; }
+  .pretty th:nth-child(3), .pretty td:nth-child(3){ word-break: break-word; }
+}
+
+/* 다크 모드 대응 (옵션) */
+@media (prefers-color-scheme: dark){
+  :root{
+    --border:#2b2f36; --bg:#0b0d10; --bg-alt:#0f1216; --bg-hover:#121720;
+    --head-bg:#10141a; --head-text:#e5e7eb; --text:#e5e7eb;
+    --shadow: 0 6px 18px rgba(0,0,0,.5);
+  }
+}
 </style>
 </head>
 <body>
 <h2>문해 학습 태도 향상 점검 도구</h2>
 <button onclick="resetFilter()">초기화</button>
-<table id="checklistTable">
-  <colgroup>
-    <col style="width: 80px;">
-    <col style="width: 60px;">
-    <col>
-    <col style="width: 120px;">
-    <col style="width: 120px;">
-    <col style="width: 120px;">
-    <col style="width: 120px;">
-  </colgroup>
-   <thead>
-    <tr>
-     <th colspan="1" rowspan="2">
-      영역
-     </th>
-     <th colspan="1" rowspan="2">
-      번호
-     </th>
-     <th colspan="1" rowspan="2">
-      문항
-     </th>
-     <th colspan="4" rowspan="1">
-      수준
-     </th>
-    </tr>
-    <tr>
-     <th>
-      전혀 그렇지 않다
-     </th>
-     <th>
-      그렇지 않다
-     </th>
-     <th>
-      그렇다
-     </th>
-     <th>
-      매우 그렇다
-     </th>
-    </tr>
-   </thead><tbody id="tableBody">
-</tbody>
-</table>
+<div class="table-wrap">
+  <table id="checklistTable" class="pretty">
+    <colgroup>
+        <col style="width: 80px;">
+        <col style="width: 60px;">
+        <col>
+        <col style="width: 120px;">
+        <col style="width: 120px;">
+        <col style="width: 120px;">
+        <col style="width: 120px;">
+    </colgroup>
+    <thead>
+        <tr>
+        <th colspan="1" rowspan="2">
+        영역
+        </th>
+        <th colspan="1" rowspan="2">
+        번호
+        </th>
+        <th colspan="1" rowspan="2">
+        문항
+        </th>
+        <th colspan="4" rowspan="1">
+        수준
+        </th>
+        </tr>
+        <tr>
+        <th>
+        전혀 그렇지 않다
+        </th>
+        <th>
+        그렇지 않다
+        </th>
+        <th>
+        그렇다
+        </th>
+        <th>
+        매우 그렇다
+        </th>
+        </tr>
+    </thead><tbody id="tableBody">
+    </tbody>
+  </table>
+</div>
 <div style="margin-top:10px;">
 <button onclick="exportExcel()">엑셀로 저장</button>
 </div>

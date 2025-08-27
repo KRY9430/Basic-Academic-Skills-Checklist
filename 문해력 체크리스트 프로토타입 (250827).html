@@ -7,37 +7,169 @@
 <meta charset="UTF-8">
 <title>문해력 향상 점검 도구</title>
 <style>
-.tooltip { position: relative; display: inline-block; cursor: help; }
-.tooltip .tooltiptext { visibility: hidden; width: 400px; background: #f9f9f9; color: #000; border: 1px solid #ccc; padding: 8px; border-radius: 4px; position: absolute; z-index: 1; top: 100%; left: 0; white-space: pre-line; }
-.tooltip:hover .tooltiptext { visibility: visible; }
-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
 th { background: #f2f2f2; }
 .control-panel { margin: 10px 0; }
-th:nth-child(1), td:nth-child(1) {
-  width: 80px;           /* 좁은 너비 */
-  white-space: normal;   /* 줄바꿈 허용 */
-  word-break: keep-all;  /* 단어 중간에서 줄바꿈 안 함 (띄어쓰기 기준으로만 줄바꿈) */
-}th:nth-child(2), td:nth-child(2) {
-  width: 80px;           /* 좁은 너비 */
-  white-space: normal;   /* 줄바꿈 허용 */
-  word-break: keep-all;  /* 단어 중간에서 줄바꿈 안 함 (띄어쓰기 기준으로만 줄바꿈) */
+:root{
+  --radius: 14px;
+  --border: #e5e7eb;
+  --bg: #ffffff;
+  --bg-alt: #fafafa;
+  --bg-hover: #f6faff;
+  --head-bg: #f8fafc;
+  --head-text: #0f172a;
+  --text: #111827;
+  --shadow: 0 6px 20px rgba(0,0,0,.06);
 }
-th:nth-child(3), td:nth-child(3) {
-  width: 80px;           /* 좁은 너비 */
-  white-space: normal;   /* 줄바꿈 허용 */
-  word-break: keep-all;  /* 단어 중간에서 줄바꿈 안 함 (띄어쓰기 기준으로만 줄바꿈) */
+
+/* 테이블 카드형 래퍼 */
+.table-wrap{
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  /* ⬇︎ 스크롤 정책 수정 */
+  overflow-x: auto;   /* 가로 스크롤은 래퍼에서 */
+  overflow-y: auto;   /* 세로 스크롤도 래퍼에서 → 페이지 스크롤과 겹침 방지 */
+  /* ⬇︎ 높이 제한(원하면 값 조절: 60~75vh 권장) */
+  max-height: 70vh;
+  margin-top: 10px;
 }
-th:nth-child(4), td:nth-child(4) {
-  width: 60%;
-  min-width: 280px;
+
+/* 깔끔한 테이블 베이스 */
+table.pretty{
+  width: 100%;
+  border-collapse: separate;   /* 기존 table {border-collapse: collapse;} 보다 구체도가 높아 override 됨 */
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+/* 셀 기본 */
+.pretty th, .pretty td{
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  word-break: keep-all;
+  background: #fff;
+}
+
+:root{
+  --stickyTop: 0px;   /* 컨테이너 내부 상단 오프셋 (보통 0) */
+  --headRow1H: 0px;   /* JS로 1행 높이를 주입 */
+}
+
+/* 1행 헤더: 컨테이너 맨 위에 고정 */
+.pretty thead tr:nth-child(1) th{
+  position: sticky;
+  top: var(--stickyTop);
+  z-index: 5;
+  background: var(--head-bg);
+}
+
+/* 2행 헤더: 1행 높이만큼 아래에 고정 */
+.pretty thead tr:nth-child(2) th{
+  position: sticky;
+  top: calc(var(--stickyTop) + var(--headRow1H));
+  z-index: 4;
+  background: var(--head-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+/* 줄무늬 + 호버 하이라이트 */
+.pretty tbody tr:nth-child(even){ background: var(--bg-alt); }
+.pretty tbody tr:hover td{ background: var(--bg-hover); }
+
+/* 둥근 모서리 */
+.pretty thead tr:first-child th:first-child{ border-top-left-radius: var(--radius); }
+.pretty thead tr:first-child th:last-child{ border-top-right-radius: var(--radius); }
+.pretty tbody tr:last-child td:first-child{ border-bottom-left-radius: var(--radius); }
+.pretty tbody tr:last-child td:last-child{ border-bottom-right-radius: var(--radius); }
+
+/* 열 너비/정렬(기존 명세 유지 + 가독성 향상) */
+.pretty th:nth-child(1), .pretty td:nth-child(1),
+.pretty th:nth-child(2), .pretty td:nth-child(2),
+.pretty th:nth-child(3), .pretty td:nth-child(3){ width: 84px; }
+.pretty th:nth-child(4), .pretty td:nth-child(4){ text-align: left; }
+.pretty th:nth-child(7), .pretty td:nth-child(7){
+  width: auto;
+  max-width: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   text-align: left;
+  vertical-align: top;
 }
-th:nth-child(7), td:nth-child(7) {
-  width: 200px;         /* 너비 고정 또는 적당히 좁게 */
-  max-width: 300px;
-  white-space: nowrap;  /* 줄바꿈 방지 */
+
+/* 라디오 입력 더 크게 */
+.pretty td input[type="radio"]{
+  width: 18px; height: 18px;
+  transform: translateY(1px);
+  cursor: pointer;
+  accent-color: #2563eb;
 }
+
+/* 툴팁 개선 (기존 .tooltip 유지, 상자만 보기 좋게) */
+.tooltip{ position: relative; display: inline-block; cursor: help; }
+.tooltip .tooltiptext{
+  visibility: hidden;
+  max-width: 520px;      /* 내용 길이에 따라 넓어짐(상한만) */
+  background: #fff;
+  color: #111827;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: 10px;
+  position: absolute; z-index: 10;
+  top: calc(100% + 8px); left: 0;
+  white-space: pre-line;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  opacity: 0; transform: translateY(-2px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.tooltip:hover .tooltiptext{
+  visibility: visible;
+  opacity: 1; transform: translateY(0);
+}
+
+/* 작은 화면 최적화 */
+@media (max-width: 760px){
+  .pretty th, .pretty td{ padding: 10px 10px; }
+  .pretty th:nth-child(4), .pretty td:nth-child(4){ word-break: break-word; }
+}
+
+/* 다크 모드 (선택) */
+@media (prefers-color-scheme: dark){
+  :root{
+    --border:#2b2f36; --bg:#0b0d10; --bg-alt:#0f1216; --bg-hover:#121720;
+    --head-bg:#10141a; --head-text:#e5e7eb; --text:#e5e7eb;
+    --shadow: 0 6px 18px rgba(0,0,0,.5);
+  }
+  .pretty th, .pretty td{ background:#0b0d10; }
+}
+
+.evidence-wrap{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.evidence-select{
+  flex: 0 0 110px;   /* 필요하면 100~140px 사이로 조절 */
+  min-width: 0;
+}
+
+.evidence-input{
+  flex: 1 1 0;       /* 남은 공간을 차지하고, 필요 시 수축 */
+  min-width: 0;      /* 수축 허용(없으면 넘침) */
+  width: auto;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;  /* … 표시 */
+  box-sizing: border-box;
+}
+
 </style>
 </head>
 <body>
@@ -50,7 +182,8 @@ th:nth-child(7), td:nth-child(7) {
 <button onclick="applyFilter()">적용</button>
 <button onclick="resetFilter()">초기화</button>
 </div>
-<table id="checklistTable">
+<div class="table-wrap">
+  <table id="checklistTable" class="pretty">
    <thead>
     <tr>
      <th colspan="1" rowspan="2">
@@ -83,6 +216,7 @@ th:nth-child(7), td:nth-child(7) {
    </thead><tbody id="tableBody">
 </tbody>
 </table>
+</div>
 <div style="margin-top:10px;">
 <button onclick="exportExcel()">엑셀로 저장</button>
 </div>
@@ -623,8 +757,8 @@ function generateTable() {
 <td><input type="radio" name="radio_${idx}" value="미도달"></td>
 <td><input type="radio" name="radio_${idx}" value="도달"></td>
 <td>
-<div style="display: flex; align-items: center; gap: 4px; max-width: 400px;">
-  <select style="flex: 0 0 100px; min-width: 50px;">
+  <div class="evidence-wrap">
+    <select class="evidence-select">
       <option value="">선택</option>
       <option value="① 이전 검사 결과 분석">① 이전 검사 결과 분석</option>
       <option value="② 신규 검사 시행">② 신규 검사 시행</option>
@@ -633,7 +767,7 @@ function generateTable() {
       <option value="⑤ 생활지도 중 관찰">⑤ 생활지도 중 관찰</option>
       <option value="⑥ 기타">⑥ 기타</option>
     </select>
-    <input type="text" style="flex: 1 1 auto; min-width: 50;">
+    <input type="text" class="evidence-input">
   </div>
 </td>
 `;
@@ -849,6 +983,29 @@ function applyFilter() {
 }
 </script>
 
+<script>
+(function(){
+  function setHeadHeights(){
+    const table = document.querySelector('.table-wrap table.pretty');
+    if(!table) return;
+    const row1 = table.querySelector('thead tr:nth-child(1)');
+    const h1 = row1 ? row1.getBoundingClientRect().height : 0;
+    document.documentElement.style.setProperty('--headRow1H', h1 + 'px');
+
+    /* 컨테이너 내부 sticky이므로 보통 0px 유지.
+       만약 .table-wrap 안쪽에 추가 고정바가 있다면 그 높이를 stickyTop에 더하세요.
+       document.documentElement.style.setProperty('--stickyTop', '0px'); */
+  }
+
+  // 초기 설정
+  setHeadHeights();
+
+  // 글꼴/창 크기/줄바꿈 변화 대응
+  const ro = new ResizeObserver(setHeadHeights);
+  ro.observe(document.documentElement);
+  window.addEventListener('load', setHeadHeights);
+})();
+</script>
 </body>
 
 </html>
