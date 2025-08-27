@@ -7,6 +7,10 @@
 <meta charset="UTF-8">
 <title>문해력 향상 점검 도구</title>
 <style>
+.tooltip { position: relative; display: inline-block; cursor: help; }
+.tooltip .tooltiptext { visibility: hidden; width: 400px; background: #f9f9f9; color: #000; border: 1px solid #ccc; padding: 8px; border-radius: 4px; position: absolute; z-index: 1; top: 100%; left: 0; white-space: pre-line; }
+.tooltip:hover .tooltiptext { visibility: visible; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
 th { background: #f2f2f2; }
 .control-panel { margin: 10px 0; }
@@ -131,10 +135,71 @@ table.pretty{
   opacity: 1; transform: translateY(0);
 }
 
-/* 작은 화면 최적화 */
-@media (max-width: 760px){
-  .pretty th, .pretty td{ padding: 10px 10px; }
-  .pretty th:nth-child(4), .pretty td:nth-child(4){ word-break: break-word; }
+/* === 데스크탑(넓은 화면)용 열 배치 재조정 === */
+@media (min-width: 1024px){
+  /* 1~3열: 영역/하위요소/학년군 → 정말 최소 폭만 사용 + 줄바꿈 허용 */
+  .pretty th:nth-child(1), .pretty td:nth-child(1),
+  .pretty th:nth-child(2), .pretty td:nth-child(2),
+  .pretty th:nth-child(3), .pretty td:nth-child(3){
+    width: 5% !important;           /* table-layout:fixed에서 최소폭 유도 */
+    max-width: 6.5rem !important;   /* 너무 커지지 않게 상한 */
+    white-space: normal !important; /* 줄바꿈 허용 */
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    padding-left: 8px; padding-right: 8px;
+  }
+
+  /* 4열: 점검 항목 → 가장 넓게 확보(콘텐츠 핵심) */
+  .pretty th:nth-child(4), .pretty td:nth-child(4){
+    width: 52% !important;          /* 표의 절반 이상을 점검 항목에 배정 */
+    max-width: none !important;
+    text-align: left;
+    word-break: keep-all;
+  }
+
+  /* 5~6열: 미도달/도달 → 라디오만 있으니 아주 타이트하게 */
+  .pretty th:nth-child(5), .pretty td:nth-child(5),
+  .pretty th:nth-child(6), .pretty td:nth-child(6){
+    width: 56px !important;         /* 필요 최소 폭 */
+    padding-left: 6px; padding-right: 6px;
+  }
+
+  /* 7열: 평정 근거 → 남는 공간을 유연하게 더 사용
+     clamp(최소, 선호, 최대)로 화면 넓으면 더 넓게 */
+  .pretty th:nth-child(7), .pretty td:nth-child(7){
+    width: clamp(220px, 24%, 36%) !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    text-align: left; vertical-align: top;
+  }
+
+  /* 평정 근거 안의 입력 줄임(… 처리) 유지 */
+  .pretty td:nth-child(7) .evidence-wrap{ width: 100%; }
+  .pretty td:nth-child(7) .evidence-select{
+    flex: 0 0 110px; min-width: 0;
+  }
+  .pretty td:nth-child(7) .evidence-input{
+    flex: 1 1 0; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+}
+
+/* 모바일/협소 화면에서는 자동 줄바꿈으로 가독성 유지 */
+@media (max-width: 1023.98px){
+  .pretty th:nth-child(1), .pretty td:nth-child(1),
+  .pretty th:nth-child(2), .pretty td:nth-child(2),
+  .pretty th:nth-child(3), .pretty td:nth-child(3){
+    width: auto !important;
+    white-space: normal; overflow-wrap: anywhere; word-break: break-word;
+  }
+  .pretty th:nth-child(4), .pretty td:nth-child(4){ width: auto !important; }
+  .pretty th:nth-child(5), .pretty td:nth-child(5),
+  .pretty th:nth-child(6), .pretty td:nth-child(6){ width: 56px; }
+  .pretty th:nth-child(7), .pretty td:nth-child(7){
+    width: auto !important;
+    white-space: normal; overflow-wrap: anywhere; word-break: break-word;
+  }
 }
 
 /* 다크 모드 (선택) */
@@ -145,6 +210,30 @@ table.pretty{
     --shadow: 0 6px 18px rgba(0,0,0,.5);
   }
   .pretty th, .pretty td{ background:#0b0d10; }
+}
+
+/* === 평정 근거 열 잘림 방지 (스타일 맨 아래에 추가) === */
+.pretty th:nth-child(7),
+.pretty td:nth-child(7){
+  width: auto;            /* 고정폭 해제 */
+  max-width: none;        /* 최대폭 제한 해제 */
+  white-space: normal;    /* 줄바꿈 허용 */
+  overflow-wrap: anywhere;/* 긴 단어도 임의 위치에서 줄바꿈 */
+  word-break: break-word; /* 브라우저 호환 보조 */
+  text-align: left;       /* 가독성 향상 */
+  vertical-align: top;    /* 여러 줄일 때 위 정렬 */
+}
+
+/* 평정 근거 열 input 잘림 처리 */
+.pretty td:nth-child(7) input[type="text"] {
+  display: block;
+  width: 100%;           /* 셀 안에 맞게 */
+  max-width: 100%;
+  box-sizing: border-box;
+
+  white-space: nowrap;   /* 줄바꿈 금지 */
+  overflow: hidden;      /* 넘친 내용은 숨김 */
+  text-overflow: ellipsis; /* ... 표시 */
 }
 
 .evidence-wrap{
