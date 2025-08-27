@@ -190,8 +190,12 @@ table.pretty{
   .pretty th:nth-child(1), .pretty td:nth-child(1),
   .pretty th:nth-child(2), .pretty td:nth-child(2),
   .pretty th:nth-child(3), .pretty td:nth-child(3){
-    width: auto !important;
-    white-space: normal; overflow-wrap: anywhere; word-break: break-word;
+    width: 5% !important;           /* table-layout:fixed에서 최소폭 유도 */
+    max-width: 6.5rem !important;   /* 너무 커지지 않게 상한 */
+    white-space: normal !important; /* 줄바꿈 허용 */
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    padding-left: 8px; padding-right: 8px;
   }
   .pretty th:nth-child(4), .pretty td:nth-child(4){ width: auto !important; }
   .pretty th:nth-child(5), .pretty td:nth-child(5),
