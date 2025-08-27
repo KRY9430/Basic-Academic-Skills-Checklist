@@ -29,13 +29,13 @@ th:nth-child(3), td:nth-child(3) {
   word-break: keep-all;  /* 단어 중간에서 줄바꿈 안 함 (띄어쓰기 기준으로만 줄바꿈) */
 }
 th:nth-child(4), td:nth-child(4) {
-  width: 40%;
+  width: 60%;
   min-width: 280px;
   text-align: left;
 }
 th:nth-child(7), td:nth-child(7) {
-  width: 250px;         /* 너비 고정 또는 적당히 좁게 */
-  max-width: 500px;
+  width: 200px;         /* 너비 고정 또는 적당히 좁게 */
+  max-width: 400px;
   white-space: nowrap;  /* 줄바꿈 방지 */
 }
 </style>
@@ -624,7 +624,7 @@ function generateTable() {
 <td><input type="radio" name="radio_${idx}" value="도달"></td>
 <td>
 <div style="display: flex; align-items: center; gap: 4px; max-width: 500px;">
-  <select style="flex: 0 0 180px; min-width: 50px;">
+  <select style="flex: 0 0 100px; min-width: 50px;">
       <option value="">선택</option>
       <option value="① 이전 검사 결과 분석">① 이전 검사 결과 분석</option>
       <option value="② 신규 검사 시행">② 신규 검사 시행</option>
