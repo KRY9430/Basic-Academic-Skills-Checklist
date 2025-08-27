@@ -206,67 +206,42 @@ table.pretty{
   .pretty th:nth-child(1), .pretty td:nth-child(1),
   .pretty th:nth-child(2), .pretty td:nth-child(2),
   .pretty th:nth-child(3), .pretty td:nth-child(3){
-    width: 5% !important;           /* table-layout:fixed에서 최소폭 유도 */
-    max-width: 6.5rem !important;   /* 너무 커지지 않게 상한 */
-    white-space: normal !important; /* 줄바꿈 허용 */
+    width: 2% !important;
+    max-width: 4.5rem !important;
+    white-space: normal !important;
     overflow-wrap: anywhere !important;
     word-break: break-word !important;
-    padding-left: 8px; padding-right: 8px;
+    padding-left: 6px; padding-right: 6px;
   }
-  .pretty th:nth-child(4), .pretty td:nth-child(4){ width: auto !important; }
+  .pretty th:nth-child(4), .pretty td:nth-child(4){
+    width: 50% !important;
+    text-align: left;
+    word-break: keep-all;
+  }
   .pretty th:nth-child(5), .pretty td:nth-child(5),
-  .pretty th:nth-child(6), .pretty td:nth-child(6){ width: 56px; }
+  .pretty th:nth-child(6), .pretty td:nth-child(6){
+    width: 46px !important;
+    padding-left: 4px; padding-right: 4px;
+  }
   .pretty th:nth-child(7), .pretty td:nth-child(7){
     width: auto !important;
     white-space: normal; overflow-wrap: anywhere; word-break: break-word;
   }
-}
+    /* 7열: 평정 근거 → 화면이 작을수록 더 넓게(최소/선호/최대) */
+  .pretty th:nth-child(7), .pretty td:nth-child(7){
+    width: clamp(240px, 54%, 68%) !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    text-align: left; vertical-align: top;
+  }
 
-/* === 평정 근거 열 잘림 방지 (스타일 맨 아래에 추가) === */
-.pretty th:nth-child(7),
-.pretty td:nth-child(7){
-  width: auto;            /* 고정폭 해제 */
-  max-width: none;        /* 최대폭 제한 해제 */
-  white-space: normal;    /* 줄바꿈 허용 */
-  overflow-wrap: anywhere;/* 긴 단어도 임의 위치에서 줄바꿈 */
-  word-break: break-word; /* 브라우저 호환 보조 */
-  text-align: left;       /* 가독성 향상 */
-  vertical-align: top;    /* 여러 줄일 때 위 정렬 */
-}
-
-/* 평정 근거 열 input 잘림 처리 */
-.pretty td:nth-child(7) input[type="text"] {
-  display: block;
-  width: 100%;           /* 셀 안에 맞게 */
-  max-width: 100%;
-  box-sizing: border-box;
-
-  white-space: nowrap;   /* 줄바꿈 금지 */
-  overflow: hidden;      /* 넘친 내용은 숨김 */
-  text-overflow: ellipsis; /* ... 표시 */
-}
-
-.evidence-wrap{
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-}
-
-.evidence-select{
-  flex: 0 0 110px;   /* 필요하면 100~140px 사이로 조절 */
-  min-width: 0;
-}
-
-.evidence-input{
-  flex: 1 1 0;       /* 남은 공간을 차지하고, 필요 시 수축 */
-  min-width: 0;      /* 수축 허용(없으면 넘침) */
-  width: auto;
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;  /* … 표시 */
-  box-sizing: border-box;
+  /* 내부 구성: select는 조금 더 작게, input은 남는 공간 모두 */
+  .pretty td:nth-child(7) .evidence-select{ flex: 0 0 90px !important; min-width: 0 !important; }
+  .pretty td:nth-child(7) .evidence-input{
+    flex: 1 1 0 !important; min-width: 0 !important;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
 }
 
 </style>
