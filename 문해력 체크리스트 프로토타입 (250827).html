@@ -95,11 +95,11 @@ table.pretty{
 .pretty th:nth-child(3), .pretty td:nth-child(3){ width: 84px; }
 .pretty th:nth-child(4), .pretty td:nth-child(4){ text-align: left; }
 .pretty th:nth-child(7), .pretty td:nth-child(7){
-  width: auto;
-  max-width: none;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  min-width: 300px !important;   /* 최소 셀 폭 */
+  width: 28% !important;         /* 데스크탑에서 적당히 넓게 */
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
   text-align: left;
   vertical-align: top;
 }
@@ -175,15 +175,30 @@ table.pretty{
   }
 
   /* 평정 근거 안의 입력 줄임(… 처리) 유지 */
-  .pretty td:nth-child(7) .evidence-wrap{ width: 100%; }
+  .pretty td:nth-child(7) .evidence-wrap{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;      /* 셀 전체 사용 */
+  min-width: 0;     /* flex 아이템 수축 허용 */
+  }
+
+  /* select는 고정폭 */
   .pretty td:nth-child(7) .evidence-select{
-    flex: 0 0 110px; min-width: 0;
+  flex: 0 0 110px;
+  min-width: 0;
   }
+
+  /* input은 남은 공간 다 차지, 줄바꿈 X, 넘치면 … */
   .pretty td:nth-child(7) .evidence-input{
-    flex: 1 1 0; min-width: 0;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
   }
-}
 
 /* 모바일/협소 화면에서는 자동 줄바꿈으로 가독성 유지 */
 @media (max-width: 1023.98px){
