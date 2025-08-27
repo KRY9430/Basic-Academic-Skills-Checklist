@@ -205,7 +205,7 @@ table.pretty{
   .pretty th:nth-child(1), .pretty td:nth-child(1),
   .pretty th:nth-child(2), .pretty td:nth-child(2),
   .pretty th:nth-child(3), .pretty td:nth-child(3){
-    width: 5% !important;           /* table-layout:fixed에서 최소폭 유도 */
+    width: 3% !important;           /* table-layout:fixed에서 최소폭 유도 */
     max-width: 6.5rem !important;   /* 너무 커지지 않게 상한 */
     white-space: normal !important; /* 줄바꿈 허용 */
     overflow-wrap: anywhere !important;
@@ -214,7 +214,10 @@ table.pretty{
   }
   .pretty th:nth-child(4), .pretty td:nth-child(4){ width: auto !important; }
   .pretty th:nth-child(5), .pretty td:nth-child(5),
-  .pretty th:nth-child(6), .pretty td:nth-child(6){ width: 56px; }
+  .pretty th:nth-child(6), .pretty td:nth-child(6){
+    width: 44px !important;           /* 폭 줄이기 */
+    padding-left: 4px; padding-right: 4px;
+  }
   .pretty th:nth-child(7), .pretty td:nth-child(7){
     width: auto !important;
     white-space: normal; overflow-wrap: anywhere; word-break: break-word;
@@ -222,28 +225,25 @@ table.pretty{
 }
 
 /* === 평정 근거 열 잘림 방지 (스타일 맨 아래에 추가) === */
-.pretty th:nth-child(7),
-.pretty td:nth-child(7){
-  width: auto;            /* 고정폭 해제 */
-  max-width: none;        /* 최대폭 제한 해제 */
-  white-space: normal;    /* 줄바꿈 허용 */
-  overflow-wrap: anywhere;/* 긴 단어도 임의 위치에서 줄바꿈 */
-  word-break: break-word; /* 브라우저 호환 보조 */
-  text-align: left;       /* 가독성 향상 */
-  vertical-align: top;    /* 여러 줄일 때 위 정렬 */
-}
-
-/* 평정 근거 열 input 잘림 처리 */
-.pretty td:nth-child(7) input[type="text"] {
-  display: block;
-  width: 100%;           /* 셀 안에 맞게 */
-  max-width: 100%;
-  box-sizing: border-box;
-
-  white-space: nowrap;   /* 줄바꿈 금지 */
-  overflow: hidden;      /* 넘친 내용은 숨김 */
-  text-overflow: ellipsis; /* ... 표시 */
-}
+  .pretty th:nth-child(7), .pretty td:nth-child(7){
+    width: auto !important;            /* 테이블이 계산한 폭 사용 */
+    min-width: 0 !important;           /* 수축 허용 (중요) */
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    text-align: left; vertical-align: top;
+  }
+  /* 내부 래퍼가 인라인 max-width 등에 막히지 않도록 */
+  .pretty td:nth-child(7) > div{
+    width: 100% !important;
+    max-width: none !important;        /* 인라인 max-width:400px 무력화 */
+    min-width: 0 !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;                   /* 폭이 부족하면 줄바꿈(랩) */
+    box-sizing: border-box;
+  }
 
 .evidence-wrap{
   display: flex;
