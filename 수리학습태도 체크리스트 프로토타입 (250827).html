@@ -1,0 +1,341 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+</script>
+<meta charset="UTF-8">
+<title>수리 학습 태도 향상 점검 도구</title>
+<style>
+.tooltip { position: relative; display: inline-block; cursor: help; }
+.tooltip .tooltiptext { visibility: hidden; width: 400px; background: #f9f9f9; color: #000; border: 1px solid #ccc; padding: 8px; border-radius: 4px; position: absolute; z-index: 1; top: 100%; left: 0; white-space: pre-line; }
+.tooltip:hover .tooltiptext { visibility: visible; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  table-layout: fixed; /* 열 너비를 colgroup 기준으로 고정 */
+}
+th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
+th { background: #f2f2f2; }
+.control-panel { margin: 10px 0; }
+th:nth-child(1), td:nth-child(1),
+th:nth-child(2), td:nth-child(2) {
+  width: 80px;           /* 좁은 너비 */
+  white-space: normal;   /* 줄바꿈 허용 */
+  word-break: keep-all;  /* 단어 중간에서 줄바꿈 안 함 (띄어쓰기 기준으로만 줄바꿈) */
+}
+:root{
+  --radius: 14px;
+  --border: #e5e7eb;
+  --bg: #ffffff;
+  --bg-alt: #fafafa;
+  --bg-hover: #f6faff;
+  --head-bg: #f8fafc;
+  --head-text: #0f172a;
+  --text: #111827;
+  --shadow: 0 6px 20px rgba(0,0,0,.06);
+}
+
+body{ color:var(--text); }
+
+.table-wrap{
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: auto;          /* 모바일·소화면 가로 스크롤 */
+}
+
+/* 둥근 모서리 & 고정 헤더를 위한 설정 */
+table.pretty{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+/* 셀 기본 */
+.pretty th,
+.pretty td{
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  word-break: keep-all;
+}
+
+/* 헤더 */
+.pretty thead th{
+  position: sticky; top: 0; z-index: 2;
+  background: var(--head-bg);
+  color: var(--head-text);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: saturate(180%) blur(4px);
+}
+
+/* 지그재그 스트라이프 + 호버 하이라이트 */
+.pretty tbody tr:nth-child(even){ background: var(--bg-alt); }
+.pretty tbody tr:hover td{ background: var(--bg-hover); }
+
+/* 첫·마지막 셀의 둥근 모서리 (첫 행/마지막 행) */
+.pretty thead tr:first-child th:first-child{ border-top-left-radius: var(--radius); }
+.pretty thead tr:first-child th:last-child{ border-top-right-radius: var(--radius); }
+.pretty tbody tr:last-child td:first-child{ border-bottom-left-radius: var(--radius); }
+.pretty tbody tr:last-child td:last-child{ border-bottom-right-radius: var(--radius); }
+
+/* 첫 번째·세 번째 열 가독성 개선 */
+.pretty th:nth-child(1), .pretty td:nth-child(1),
+.pretty th:nth-child(2), .pretty td:nth-child(2){ width: 84px; }
+.pretty td:nth-child(3){ text-align: left; }
+
+/* 라디오 입력 크게 & 간격 */
+.pretty td input[type="radio"]{
+  width: 18px; height: 18px;
+  transform: translateY(1px);
+  cursor: pointer;
+  accent-color: #2563eb; /* 지원 브라우저에서 파란 포커스 */
+}
+.pretty td input[type="radio"] + label{
+  margin-left: 6px;
+}
+
+/* 툴팁 더 보기 좋게 */
+.tooltip{ position: relative; display: inline-block; cursor: help; }
+.tooltip .tooltiptext{
+  visibility: hidden;
+  max-width: 520px;        /* 내용 길이에 맞춰 커지도록 최대폭만 지정 */
+  background: #fff;
+  color: #111827;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: 10px;
+  position: absolute; z-index: 10;
+  top: calc(100% + 8px); left: 0;
+  white-space: pre-line;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  opacity: 0; transform: translateY(-2px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.tooltip:hover .tooltiptext{
+  visibility: visible;
+  opacity: 1; transform: translateY(0);
+}
+
+/* 작은 화면 최적화 */
+@media (max-width: 760px){
+  .pretty th, .pretty td{ padding: 10px 10px; }
+  .pretty th:nth-child(3), .pretty td:nth-child(3){ word-break: break-word; }
+}
+
+/* 다크 모드 대응 (옵션) */
+@media (prefers-color-scheme: dark){
+  :root{
+    --border:#2b2f36; --bg:#0b0d10; --bg-alt:#0f1216; --bg-hover:#121720;
+    --head-bg:#10141a; --head-text:#e5e7eb; --text:#e5e7eb;
+    --shadow: 0 6px 18px rgba(0,0,0,.5);
+  }
+}
+</style>
+</head>
+<body>
+<h2>수리 학습 태도 향상 점검 도구</h2>
+<button onclick="resetFilter()">초기화</button>
+<div class="table-wrap">
+  <table id="checklistTable" class="pretty">
+    <colgroup>
+        <col style="width: 80px;">
+        <col style="width: 60px;">
+        <col>
+        <col style="width: 120px;">
+        <col style="width: 120px;">
+        <col style="width: 120px;">
+        <col style="width: 120px;">
+    </colgroup>
+    <thead>
+        <tr>
+        <th colspan="1" rowspan="2">
+        영역
+        </th>
+        <th colspan="1" rowspan="2">
+        번호
+        </th>
+        <th colspan="1" rowspan="2">
+        문항
+        </th>
+        <th colspan="4" rowspan="1">
+        수준
+        </th>
+        </tr>
+        <tr>
+        <th>
+        전혀 그렇지 않다
+        </th>
+        <th>
+        그렇지 않다
+        </th>
+        <th>
+        그렇다
+        </th>
+        <th>
+        매우 그렇다
+        </th>
+        </tr>
+    </thead><tbody id="tableBody">
+    </tbody>
+  </table>
+</div>
+<div style="margin-top:10px;">
+<button onclick="exportExcel()">엑셀로 저장</button>
+</div>
+<script>
+let previousStates = {};
+const data = [
+ {'영역': '수리 학습 참여', '번호': 1, '문항': '수와 연산 관련 활동에 대체로 집중하여 참여한다.'},
+ {'영역': '수리 학습 참여', '번호': 2, '문항': '변화와 관계 관련 활동에 대체로 집중하여 참여한다.'},
+ {'영역': '수리 학습 참여', '번호': 3, '문항': '도형과 측정 관련 활동에 대체로 집중하여 참여한다.'},
+ {'영역': '수리 학습 참여', '번호': 4, '문항': '자료와 가능성 관련 활동에 대체로 집중하여 참여한다.'},
+ {'영역': '수리 학습 참여', '번호': 5, '문항': '문제 해결을 위한 짝 활동이나 모둠 활동에 참여한다.'},
+ {'영역': '수리 학습 참여', '번호': 6, '문항': '수학 개념 및 원리에 대해 말, 그림, 교구 등을 이용하여 간단히 설명한다.'},
+ {'영역': '수리 학습 참여', '번호': 7, '문항': '수업 중 수학 내용에 대한 교사나 친구의 설명을 경청한다. '},
+ {'영역': '수리 학습 참여', '번호': 8, '문항': '수준에 맞게 주어진 수학 문제(또는 활동)를 정해진 시간 내에 해결한다.'},
+ {'영역': '수리 학습 의지', '번호': 9, '문항': '자신의 힘으로 수학 문제를 해결하려고 시도한다.'},
+ {'영역': '수리 학습 의지', '번호': 10, '문항': '어려운 수학 문제나 개념 등을 자발적으로 교사나 친구에게 질문한다.'},
+ {'영역': '수리 학습 의지', '번호': 11, '문항': '틀린 문제를 다시 풀기 위해 시도한다.'},
+ {'영역': '수리 학습 의지', '번호': 12, '문항': '문제가 어려워도 쉽게 포기하지 않는다.'},
+ {'영역': '수리 학습 의지', '번호': 13, '문항': '시간이 걸려도 주어진 수학 문제(또는 활동)를 끝까지 마무리한다.'}
+];
+
+function generateTable() {
+    const tbody = document.getElementById('tableBody');
+    const checkedGrades = Array.from(document.querySelectorAll('.gradeFilter:checked')).map(cb => cb.value);
+
+    // Save previous states using key -> {selectedValue, reason}
+    
+    document.querySelectorAll("#tableBody tr").forEach(row => {
+        const tds = row.querySelectorAll("td");
+        if (tds.length < 4) return;
+        const key = tds[0].innerText.trim() + "|" + tds[1].innerText.trim() + "|" + tds[2].innerText.trim() + "|" + tds[3].innerText.trim();
+        let selectedValue = "";
+        row.querySelectorAll("input[type='radio']").forEach(input => {
+            if (input.checked) selectedValue = input.value;
+        });
+        const reasonInput = row.querySelector("input[type='text']");
+        const reason = reasonInput ? reasonInput.value.trim() : "";
+        previousStates[key] = { selectedValue, reason };
+    });
+
+    tbody.innerHTML = "";
+    const filtered = data;
+    filtered.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        const key = item['영역'] + "|" + item['번호'] + "|" + item['문항'];
+        tr.innerHTML = `
+<td>${item['영역']}</td>
+<td>${item['번호']}</td>
+<td style="text-align:left;">
+  <div class="tooltip">
+    ${item['문항']}
+  </div>
+</td>
+<td><input type="radio" name="radio_${idx}" value="전혀 그렇지 않다"></td>
+<td><input type="radio" name="radio_${idx}" value="그렇지 않다"></td>
+<td><input type="radio" name="radio_${idx}" value="그렇다"></td>
+<td><input type="radio" name="radio_${idx}" value="매우 그렇다"></td>
+`;
+        tbody.appendChild(tr);
+
+    });
+    const rows = Array.from(document.querySelectorAll('#checklistTable tbody tr'));
+    const visible = rows.map(row => row.style.display !== 'none');
+
+    // Helper to get cell text
+    function cellText(row, idx) {
+        return row.children[idx].innerText.trim();
+    }
+
+    // mergeColumn 함수 정의
+    function mergeColumn(colIdx, sameGroup) {
+        let lastVisibleRow = null;
+        let span = 1;
+
+        rows.forEach((row, i) => {
+            const currentCell = row.children[colIdx];
+            currentCell.rowSpan = 1;
+            currentCell.style.display = "";
+
+            if (!lastVisibleRow) {
+                lastVisibleRow = row;
+                span = 1;
+                return;
+            }
+
+            if (cellText(row, colIdx) === cellText(lastVisibleRow, colIdx) && sameGroup(row, i, lastVisibleRow)) {
+                span++;
+                currentCell.style.display = "none";
+                lastVisibleRow.children[colIdx].rowSpan = span;
+            } else {
+                lastVisibleRow = row;
+                span = 1;
+            }
+        });
+    }
+
+    // 영역(col0) 병합
+    mergeColumn(0, ()=>true);
+}
+
+function resetFilter() {
+    location.reload(); // 페이지를 새로고침하여 병합된 셀 구조 유지 및 입력값 완전 초기화
+}
+
+document.addEventListener('DOMContentLoaded', generateTable);
+
+
+function exportExcel() {
+    const wb = XLSX.utils.book_new();
+    const ws_data = [["영역","번호","문항","전혀 그렇지 않다","그렇지 않다","그렇다","매우 그렇다"]];
+
+    const rows = document.querySelectorAll("#tableBody tr");
+    let currentArea = "";
+    let currentGrade = "";
+
+    rows.forEach(row => {
+        if (row.style.display === "none") return;
+
+        const tds = row.querySelectorAll("td");
+        if (tds.length < 7) return;
+
+        const areaText = tds[0].innerText.trim();
+        if (areaText !== "") currentArea = areaText;
+
+        const gradeText = tds[1].innerText.trim();
+        if (gradeText !== "") currentGrade = gradeText;
+
+        const content = tds[2].innerText.trim();
+
+        const levelIndicators = [];
+        for (let i = 3; i <= 6; i++) {
+            const input = tds[i].querySelector("input[type='radio']");
+            levelIndicators.push(input && input.checked ? "V" : "");
+        }
+
+        ws_data.push([
+            currentArea,
+            currentGrade,
+            content,
+            ...levelIndicators
+        ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, "수리 학습 태도 향상 점검 도구");
+    XLSX.writeFile(wb, "수리학습태도_향상_점검_결과.xlsx");
+}
+
+</script>
+
+</body>
+
+</html>

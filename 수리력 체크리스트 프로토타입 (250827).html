@@ -1,0 +1,1144 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+</script>
+<meta charset="UTF-8">
+<title>수리력 향상 점검 도구</title>
+<style>
+.tooltip { position: relative; display: inline-block; cursor: help; }
+.tooltip .tooltiptext { visibility: hidden; width: 400px; background: #f9f9f9; color: #000; border: 1px solid #ccc; padding: 2px; border-radius: 4px; position: absolute; z-index: 1; top: 100%; left: 0; white-space: pre-line; }
+.tooltip:hover .tooltiptext { visibility: visible; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
+th { background: #f2f2f2; }
+.control-panel { margin: 10px 0; }
+:root{
+  --radius: 14px;
+  --border: #e5e7eb;
+  --bg: #ffffff;
+  --bg-alt: #fafafa;
+  --bg-hover: #f6faff;
+  --head-bg: #f8fafc;
+  --head-text: #0f172a;
+  --text: #111827;
+  --shadow: 0 6px 20px rgba(0,0,0,.06);
+}
+
+/* 테이블 카드형 래퍼 */
+.table-wrap{
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  /* ⬇︎ 스크롤 정책 수정 */
+  overflow-x: auto;   /* 가로 스크롤은 래퍼에서 */
+  overflow-y: auto;   /* 세로 스크롤도 래퍼에서 → 페이지 스크롤과 겹침 방지 */
+  /* ⬇︎ 높이 제한(원하면 값 조절: 60~75vh 권장) */
+  max-height: 70vh;
+  margin-top: 10px;
+}
+
+/* 깔끔한 테이블 베이스 */
+table.pretty{
+  width: 100%;
+  border-collapse: separate;   /* 기존 table {border-collapse: collapse;} 보다 구체도가 높아 override 됨 */
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+/* 셀 기본 */
+.pretty th, .pretty td{
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  word-break: keep-all;
+  background: #fff;
+}
+
+:root{
+  --stickyTop: 0px;   /* 컨테이너 내부 상단 오프셋 (보통 0) */
+  --headRow1H: 0px;   /* JS로 1행 높이를 주입 */
+}
+
+/* 1행 헤더: 컨테이너 맨 위에 고정 */
+.pretty thead tr:nth-child(1) th{
+  position: sticky;
+  top: var(--stickyTop);
+  z-index: 5;
+  background: var(--head-bg);
+}
+
+/* 2행 헤더: 1행 높이만큼 아래에 고정 */
+.pretty thead tr:nth-child(2) th{
+  position: sticky;
+  top: calc(var(--stickyTop) + var(--headRow1H));
+  z-index: 4;
+  background: var(--head-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+/* 줄무늬 + 호버 하이라이트 */
+.pretty tbody tr:nth-child(even){ background: var(--bg-alt); }
+.pretty tbody tr:hover td{ background: var(--bg-hover); }
+
+/* 둥근 모서리 */
+.pretty thead tr:first-child th:first-child{ border-top-left-radius: var(--radius); }
+.pretty thead tr:first-child th:last-child{ border-top-right-radius: var(--radius); }
+.pretty tbody tr:last-child td:first-child{ border-bottom-left-radius: var(--radius); }
+.pretty tbody tr:last-child td:last-child{ border-bottom-right-radius: var(--radius); }
+
+/* 열 너비/정렬(기존 명세 유지 + 가독성 향상) */
+.pretty th:nth-child(1), .pretty td:nth-child(1),
+.pretty th:nth-child(2), .pretty td:nth-child(2),
+.pretty th:nth-child(3), .pretty td:nth-child(3){ width: 84px; }
+.pretty th:nth-child(4), .pretty td:nth-child(4){ text-align: left; }
+.pretty th:nth-child(7), .pretty td:nth-child(7){
+  min-width: 300px !important;   /* 최소 셀 폭 */
+  width: 28% !important;         /* 데스크탑에서 적당히 넓게 */
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  text-align: left;
+  vertical-align: top;
+}
+
+/* 라디오 입력 더 크게 */
+.pretty td input[type="radio"]{
+  width: 18px; height: 18px;
+  transform: translateY(1px);
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+/* 툴팁 개선 (기존 .tooltip 유지, 상자만 보기 좋게) */
+.tooltip{ position: relative; display: inline-block; cursor: help; }
+.tooltip .tooltiptext{
+  visibility: hidden;
+  max-width: 520px;      /* 내용 길이에 따라 넓어짐(상한만) */
+  background: #fff;
+  color: #111827;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: 10px;
+  position: absolute; z-index: 10;
+  top: calc(100% + 8px); left: 0;
+  white-space: pre-line;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  opacity: 0; transform: translateY(-2px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.tooltip:hover .tooltiptext{
+  visibility: visible;
+  opacity: 1; transform: translateY(0);
+}
+
+/* === 데스크탑(넓은 화면)용 열 배치 재조정 === */
+@media (min-width: 1024px){
+  /* 1~3열: 영역/하위요소/학년군 → 정말 최소 폭만 사용 + 줄바꿈 허용 */
+  .pretty th:nth-child(1), .pretty td:nth-child(1),
+  .pretty th:nth-child(2), .pretty td:nth-child(2),
+  .pretty th:nth-child(3), .pretty td:nth-child(3){
+    width: 5% !important;           /* table-layout:fixed에서 최소폭 유도 */
+    max-width: 6.5rem !important;   /* 너무 커지지 않게 상한 */
+    white-space: normal !important; /* 줄바꿈 허용 */
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    padding-left: 8px; padding-right: 8px;
+  }
+
+  /* 4열: 점검 항목 → 가장 넓게 확보(콘텐츠 핵심) */
+  .pretty th:nth-child(4), .pretty td:nth-child(4){
+    width: 52% !important;          /* 표의 절반 이상을 점검 항목에 배정 */
+    max-width: none !important;
+    text-align: left;
+    word-break: keep-all;
+  }
+
+  /* 5~6열: 미도달/도달 → 라디오만 있으니 아주 타이트하게 */
+  .pretty th:nth-child(5), .pretty td:nth-child(5),
+  .pretty th:nth-child(6), .pretty td:nth-child(6){
+    width: 56px !important;         /* 필요 최소 폭 */
+    padding-left: 6px; padding-right: 6px;
+  }
+
+  /* 7열: 평정 근거 → 남는 공간을 유연하게 더 사용
+     clamp(최소, 선호, 최대)로 화면 넓으면 더 넓게 */
+  .pretty th:nth-child(7), .pretty td:nth-child(7){
+    width: clamp(220px, 24%, 36%) !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    text-align: left; vertical-align: top;
+  }
+
+  /* 평정 근거 안의 입력 줄임(… 처리) 유지 */
+  .pretty td:nth-child(7) .evidence-wrap{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;      /* 셀 전체 사용 */
+  min-width: 0;     /* flex 아이템 수축 허용 */ 
+  }
+
+  /* select는 고정폭 */ 
+  .pretty td:nth-child(7) .evidence-select{
+    flex: 0 0 110px;
+    min-width: 0;
+  }
+
+  /* input은 남은 공간 다 차지, 줄바꿈 X, 넘치면 … */ 
+  .pretty td:nth-child(7) .evidence-input{
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+  } 
+}
+
+/* 모바일/협소 화면에서는 자동 줄바꿈으로 가독성 유지 */
+@media (max-width: 1023.98px){
+  .pretty th:nth-child(1), .pretty td:nth-child(1),
+  .pretty th:nth-child(2), .pretty td:nth-child(2),
+  .pretty th:nth-child(3), .pretty td:nth-child(3){
+    width: 6% !important;
+    max-width: 4.5rem !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    padding-left: 6px; padding-right: 6px;
+  }
+  .pretty th:nth-child(4), .pretty td:nth-child(4){
+    width: 35% !important;
+    text-align: left;
+    word-break: keep-all;
+  }
+  .pretty th:nth-child(5), .pretty td:nth-child(5),
+  .pretty th:nth-child(6), .pretty td:nth-child(6){
+    width: 40px !important;
+    padding-left: 4px; padding-right: 4px;
+  }
+  /* 평정 근거 안의 입력 줄임(… 처리) 유지 */
+  .pretty td:nth-child(7) .evidence-wrap{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;      /* 셀 전체 사용 */
+  min-width: 0;     /* flex 아이템 수축 허용 */ 
+  }
+
+  /* select는 고정폭 */ 
+  .pretty td:nth-child(7) .evidence-select{
+    flex: 0 0 110px;
+    min-width: 0;
+  }
+
+  /* input은 남은 공간 다 차지, 줄바꿈 X, 넘치면 … */ 
+  .pretty td:nth-child(7) .evidence-input{
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+  } 
+}
+
+</style>
+</head>
+<body>
+<h2>수리력 향상 점검 도구</h2>
+<div class="control-panel">
+학년:
+<label><input type="checkbox" class="gradeFilter" value="1" checked> 1학년</label>
+<label><input type="checkbox" class="gradeFilter" value="2" checked> 2학년</label>
+<label><input type="checkbox" class="gradeFilter" value="3" checked> 3학년</label>
+<label><input type="checkbox" class="gradeFilter" value="4" checked> 4학년</label>
+<label><input type="checkbox" class="gradeFilter" value="5" checked> 5학년</label>
+<label><input type="checkbox" class="gradeFilter" value="6" checked> 6학년</label>
+<button onclick="applyFilter()">적용</button>
+<button onclick="resetFilter()">초기화</button>
+</div>
+<div class="table-wrap">
+  <table id="checklistTable" class="pretty">
+   <thead>
+    <tr>
+     <th colspan="1" rowspan="2">
+      영역
+     </th>
+     <th colspan="1" rowspan="2">
+      핵심 요소
+     </th>
+     <th colspan="1" rowspan="2">
+      학년
+     </th>
+     <th colspan="1" rowspan="2">
+      점검 항목
+     </th>
+     <th colspan="2" rowspan="1">
+      도달 여부
+     </th>
+     <th colspan="1" rowspan="2">
+      평정 근거
+     </th>
+    </tr>
+    <tr>
+     <th>
+      미도달
+     </th>
+     <th>
+      도달
+     </th>
+    </tr>
+   </thead><tbody id="tableBody">
+</tbody>
+</table>
+</div>
+<div style="margin-top:10px;">
+<button onclick="exportExcel()">엑셀로 저장</button>
+</div>
+<script>
+let previousStates = {};
+const data = [
+{'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '1',
+  '점검 항목': '▪ 한 자리 수를 세고 읽고 쓸 수 있다.',
+  '세부 점검 요소': '- 구체물을 세어 9까지의 수를 세고 읽고 쓸 수 있다.<br>- 9까지의 수를 순서대로 읽고 쓸 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '1',
+  '점검 항목': '▪ 두 자리 수를 세고 읽고 쓸 수 있다.',
+  '세부 점검 요소': '- 구체물을 세어 100까지의 수를 세고 읽고 쓸 수 있다.<br>- 100까지의 수를 순서대로 읽고 쓸 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '2',
+  '점검 항목': '▪ 세 자리 수를 읽고 쓸 수 있다.',
+  '세부 점검 요소': '- 백, 몇백을 알고 세 자리 수를 읽고 쓸 수 있다.<br>- 세 자리 수의 범위에서 수를 순서대로 말할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '2',
+  '점검 항목': '▪ 네 자리 수를 읽고 쓸 수 있다.',
+  '세부 점검 요소': '- 천, 몇천을 알고 네 자리 수를 읽고 쓸 수 있다.<br>- 네 자리 수의 범위에서 수를 순서대로 말할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '2',
+  '점검 항목': '▪ 네 자리 이하의 수의 범위에서 수의 크기를 비교할 수 있다.',
+  '세부 점검 요소': '- 세 자리 수의 범위에서 수의 크기를 비교할 수 있다.<br>- 네 자리 수의 범위에서 수의 크기를 비교할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '3',
+  '점검 항목': '▪ 분수를 읽고 쓸 수 있다.',
+  '세부 점검 요소': '- 양의 등분할을 통해 분수를 나타낼 수 있다.<br>- 분모와 분자를 구별하여 분수를 읽고 쓸 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '3',
+  '점검 항목': '▪ 가분수를 대분수로, 대분수를 가분수로 나타낼 수 있다.',
+  '세부 점검 요소': '- 진분수, 가분수, 대분수를 구분할 수 있다.<br>- 가분수를 대분수로 나타낼 수 있다.<br>- 대분수를 가분수로 나타낼 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '3',
+  '점검 항목': '▪ 분모가 같은 분수끼리 크기를 비교할 수 있다.',
+  '세부 점검 요소': '- 분모가 같은 진분수의 크기를 비교할 수 있다.<br>- 분모가 같은 가분수와 대분수의 크기를 비교할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '3',
+  '점검 항목': '▪ 소수 한 자리 수의 범위에서 소수의 크기를 비교할 수 있다. ',
+  '세부 점검 요소': '- 한 자리의 두 소수의 크기를 비교할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '4',
+  '점검 항목': '▪ 만, 억 단위의 수를 읽고 쓸 수 있다.',
+  '세부 점검 요소': '- 만, 십만, 백만, 천만 단위의 수를 읽고, 쓸 수 있다.<br>- 억, 십억, 백억, 천억 단위의 수를 읽고, 쓸 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '4',
+  '점검 항목': '▪ 다섯 자리 이상의 수의 범위에서 수의 크기를 비교할 수 있다.',
+  '세부 점검 요소': '- 다섯 자리 이상의 수의 범위에서 수의 크기를 비교할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '4',
+  '점검 항목': '▪ 분모가 10, 100, 1000인 분수를 소수로 나타낼 수 있다.',
+  '세부 점검 요소': '- 분모가 10인 분수를 소수로 나타낼 수 있다.<br>- 분모가 100인 분수를 소수로 나타낼 수 있다.<br>- 분모가 1000인 분수를 소수로 나타낼 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '4',
+  '점검 항목': '▪ 소수 세 자리 수의 범위에서 소수를 읽고 쓸 수 있다.',
+  '세부 점검 요소': '- 1보다 작거나 큰 한 자리의 소수를 읽고 쓸 수 있다.<br>- 두 자리 및 세 자리의 소수를 읽고 쓸 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '4',
+  '점검 항목': '▪ 소수 세 자리 수의 범위에서 소수의 크기를 비교할 수 있다. ',
+  '세부 점검 요소': '- 두 자리의 두 소수의 크기를 비교할 수 있다.<br>- 두 자리의 두 소수의 크기를 비교할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '5',
+  '점검 항목': '▪ 약수의 의미를 알고 구할 수 있다.',
+  '세부 점검 요소': '- 약수의 의미를 안다.<br>- 주어진 수의 약수를 구할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '5',
+  '점검 항목': '▪ 공약수, 최대공약수의 의미를 알고 구할 수 있다.',
+  '세부 점검 요소': '- 공약수, 최대공약수의 의미를 안다.<br>- 두 수의 공약수, 최대공약수를 구할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '5',
+  '점검 항목': '▪ 배수의 의미를 알고 구할 수 있다.',
+  '세부 점검 요소': '- 배수의 의미를 안다.<br>- 주어진 수의 배수를 구할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '5',
+  '점검 항목': '▪ 공배수, 최소공배수의 의미를 알고 구할 수 있다.',
+  '세부 점검 요소': '- 공배수, 최소공배수의 의미를 안다.<br>- 두 수의 공배수, 최소공배수를 구할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '5',
+  '점검 항목': '▪ 분수의 성질을 이용하여 크기가 같은 분수를 만들 수 있다.',
+  '세부 점검 요소': '- 크기가 같은 분수를 안다.<br>- 분수를 통분, 약분하여 크기가 같은 분수를 찾을 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '5',
+  '점검 항목': '▪ 분수를 약분할 수 있다. ',
+  '세부 점검 요소': '- 주어진 분수를 약분할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '5',
+  '점검 항목': '▪ 분수를 통분할 수 있다. ',
+  '세부 점검 요소': '- 두 분수를 통분할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '5',
+  '점검 항목': '▪ 이상, 이하, 초과, 미만의 의미를 알고, 이를 활용하여 간단한 수의 범위를 나타낼 수 있다.',
+  '세부 점검 요소': '- 이상, 이하, 초과, 미만의 의미를 안다.<br>- 이상, 이하, 초과, 미만을 활용하여 간단한 수의 범위를 나타낼 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수 감각',
+  '학년': '5',
+  '점검 항목': '▪ 올림, 버림, 반올림의 의미를 알고, 이를 활용하여 어림값을 구할 수 있다.',
+  '세부 점검 요소': '- 올림, 버림, 반올림의 의미를 안다.<br>- 올림, 버림, 반올림하여 어림값으로 나타낼 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '1',
+  '점검 항목': '▪ 두 자리 수 범위에서 받아올림이 없는 덧셈을 할 수 있다. ',
+  '세부 점검 요소': '- (몇)+(몇)=(몇)을 계산할 수 있다.<br>- 받아올림이 없는 두 자리 수의 덧셈을 할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '1',
+  '점검 항목': '▪ 받아올림이 있는 (한 자리 수)+(한 자리 수)를 계산할 수 있다. ',
+  '세부 점검 요소': '- (몇)+(몇)=(십)을 계산할 수 있다.<br>- (몇)+(몇)=(십몇)을 계산할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '1',
+  '점검 항목': '▪ 두 자리 수 범위에서 받아내림이 없는 뺄셈을 할 수 있다. ',
+  '세부 점검 요소': '- (몇)-(몇)=(몇)을 계산할 수 있다.<br>- 받아내림이 없는 두 자리 수의 뺄셈을 할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '1',
+  '점검 항목': '▪ 받아내림이 있는 (십몇)-(몇)을 계산할 수 있다. ',
+  '세부 점검 요소': '- (십)-(몇)=(몇)을 계산할 수 있다.<br>- (십몇)-(몇)=(몇)을 계산할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '2',
+  '점검 항목': '▪ 두 자리 수 범위에서 받아올림이 있는 덧셈을 할 수 있다.',
+  '세부 점검 요소': '- 받아올림이 있는 두 자리 수의 덧셈을 할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '2',
+  '점검 항목': '▪ 두 자리 수의 범위에서 받아내림이 있는 뺄셈을 할 수 있다.',
+  '세부 점검 요소': '- 받아내림이 있는 두 자리 수의 뺄셈을 할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '2',
+  '점검 항목': '▪ 한 자리 수의 곱셈을 할 수 있다. ',
+  '세부 점검 요소': '- 곱셈구구를 말할 수 있다.<br>- 한 자리 수의 곱셈을 할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '3',
+  '점검 항목': '▪ 세 자리 이하인 두 수의 간단한 덧셈과 뺄셈을 할 수 있다.',
+  '세부 점검 요소': '- 받아올림이나 받아내림이 없는 세 자리 수의 덧셈과 뺄셈을 할 수 있다.<br>- 받아올림이나 받아내림이 있는 세 자리 수의 덧셈과 뺄셈을 할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '3',
+  '점검 항목': '▪ 간단한 (두 자리 수)×(한 자리 수)를 계산할 수 있다.',
+  '세부 점검 요소': '- (몇십)×(몇)을 계산할 수 있다.<br>- (몇십몇)×(몇)을 계산할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '3',
+  '점검 항목': '▪ 간단한 (두 자리 수)×(두 자리 수)를 계산할 수 있다.',
+  '세부 점검 요소': '- (몇십몇)×(몇십)을 계산할 수 있다.<br>- (몇십몇)×(몇십몇)을 계산할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '3',
+  '점검 항목': '▪ 곱셈식을 나눗셈식으로 바꿀 수 있다. ',
+  '세부 점검 요소': '- 곱셈식을 나눗셈식으로 바꿀 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '3',
+  '점검 항목': '▪ 나눗셈식을 곱셈식으로 바꿀 수 있다.',
+  '세부 점검 요소': '- 나눗셈식을 곱셈식으로 바꿀 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '3',
+  '점검 항목': '▪ 나누어떨어지는 (두 자리 수)÷(한 자리 수)를 계산할 수 있다.',
+  '세부 점검 요소': '- 나누어떨어지는 (두 자리 수)÷(한 자리 수)의 몫을 곱셈식과 곱셈구구를 이용하여 구할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '3',
+  '점검 항목': '▪ 나누어떨어지지 않는 (두 자리 수)÷(한 자리 수)의 몫과 나머지를 찾을 수 있다.',
+  '세부 점검 요소': '- 나누어떨어지지 않는 (두 자리 수)÷(한 자리 수)의 몫과 나머지를 구할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '4',
+  '점검 항목': '▪ 분모가 같은 분수의 간단한 덧셈과 뺄셈을 할 수 있다.',
+  '세부 점검 요소': '- 분모가 같은 두 진분수의 덧셈과 뺄셈을 할 수 있다.<br>- 분모가 같은 두 대분수의 덧셈과 뺄셈을 할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '4',
+  '점검 항목': '▪ 소수 두 자리 수의 범위에서 간단한 소수의 덧셈과 뺄셈을 할 수 있다.',
+  '세부 점검 요소': '- 소수 한 자리 수의 덧셈과 뺄셈을 할 수 있다.<br>- 소수 두 자리 수의 덧셈과 뺄셈을 할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '5',
+  '점검 항목': '▪ 분모가 다른 두 진분수의 덧셈과 뺄셈을 할 수 있다.',
+  '세부 점검 요소': '- 분모가 다른 두 진분수를 통분하여 덧셈과 뺄셈을 계산할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '5',
+  '점검 항목': '▪ ‘(진분수)×(자연수)’, ‘(자연수)×(진분수)’, ‘(진분수)×(진분수)’의 계산을 할 수 있다.',
+  '세부 점검 요소': '- (진분수)×(자연수), (자연수)×(진분수)의 계산을 할 수 있다.<br>- (진분수)×(진분수)의 계산을 할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '5',
+  '점검 항목': '▪ (소수 한 자리 수)×(자연수)’, ‘(소수 두 자 리 수)×(자연수)’의 계산을 할 수 있다.',
+  '세부 점검 요소': '- (소수 한 자리 수)×(자연수)의 계산을 할 수 있다.<br>- (소수 두 자리 수)×(자연수)의 계산을 할 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '6',
+  '점검 항목': '▪ (자연수)÷(자연수)의 몫을 분수로 나타낼 수 있다.',
+  '세부 점검 요소': '- 몫이 1보다 작은 (자연수)÷(자연수)에서 몫을 분수로 나타낼 수 있다.<br>- 몫이 1보다 큰 (자연수)÷(자연수)에서 몫을 분수로 나타낼 수 있다.'},
+ {'영역': '수와 연산',
+  '핵심 요소': '수의 계산',
+  '학년': '6',
+  '점검 항목': '▪ 몫이 소수 한 자리 수인 (소수)÷(자연수)를 계산할 수 있다.',
+  '세부 점검 요소': '- 몫이 소수 한 자리 수인 (소수 한 자리 수)÷(자연수)의 계산을 할 수 있다'},
+ {'영역': '변화와 관계',
+  '핵심 요소': '규칙과 대응',
+  '학년': '1',
+  '점검 항목': '▪ 간단한 규칙에 따라 배열된 물체, 무늬, 수 등을 이어서 배열할 수 있다. ',
+  '세부 점검 요소': '- 물체, 무늬, 수 등의 배열에서 규칙을 찾을 수 있다.<br>- 배열된 물체, 무늬, 수 등을 이어서 배열할 수 있다.'},
+ {'영역': '변화와 관계',
+  '핵심 요소': '규칙과 대응',
+  '학년': '2',
+  '점검 항목': '▪ 쌓기나무 배열, 덧셈표, 곱셈표 등에서 규칙을 찾을 수 있다.  ',
+  '세부 점검 요소': '- 쌓기나무 배열, 덧셈표, 곱셈표 등에서 규칙을 찾을 수 있다.'},
+ {'영역': '변화와 관계',
+  '핵심 요소': '규칙과 대응',
+  '학년': '4',
+  '점검 항목': '▪ 간단한 배열에서 규칙을 수나 식으로 나타낼 수 있다.',
+  '세부 점검 요소': '- 간단한 배열에서 변화 규칙을 찾을 수 있다.<br>- 변화 규칙을 수나 식으로 나타낼 수 있다.'},
+ {'영역': '변화와 관계',
+  '핵심 요소': '규칙과 대응',
+  '학년': '5',
+  '점검 항목': '▪ 대응 관계를 나타낸 표에서 규칙을 찾아 □, △ 등을 사용하여 식으로 나타낼 수 있다.',
+  '세부 점검 요소': '- 대응관계를 나타낸 표의 규칙을 찾을 수 있다.<br>- 대응관계를 나타낸 표의 규칙을 올바르게 설명하는 식을 찾을 수 있다.'},
+ {'영역': '변화와 관계',
+  '핵심 요소': '비와 비율',
+  '학년': '6',
+  '점검 항목': '▪ 두 양의 크기를 비교하여 그 관계를 비로 나타낼 수 있다.',
+  '세부 점검 요소': '- 비의 뜻을 안다.<br>- 두 양의 크기를 비의 기호를 사용하여 나타낼 수 있다.'},
+ {'영역': '변화와 관계',
+  '핵심 요소': '비와 비율',
+  '학년': '6',
+  '점검 항목': '▪ 비율을 분수, 소수, 백분율로 나타낼 수 있다.',
+  '세부 점검 요소': '- 비율의 뜻을 알고, 비율을 분수, 소수로 나타낼 수 있다.<br>- 백분율의 뜻을 알고, 비율을 백분율로 나타낼 수 있다.'},
+ {'영역': '변화와 관계',
+  '핵심 요소': '비와 비율',
+  '학년': '6',
+  '점검 항목': '▪ 간단한 비례식을 풀 수 있다. ',
+  '세부 점검 요소': '- 비례식의 성질을 안다.<br>- 비례식의 성질을 이용하여 간단한 비례식을 풀 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '2',
+  '점검 항목': '▪ 삼각형, 사각형, 원을 찾을 수 있다.',
+  '세부 점검 요소': '- 생활 주변에서에서 삼각형, 사각형, 원의 모양을 찾을 수 있다.<br>- 주어진 도형에서 삼각형, 사각형, 원을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '2',
+  '점검 항목': '▪ 삼각형, 사각형에서 꼭짓점과 변을 찾을 수 있다.',
+  '세부 점검 요소': '- 삼각형, 사각형, 원의 특징을 직관적으로 파악한다.<br>- 삼각형, 사각형, 원의 모양을 그릴 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '3',
+  '점검 항목': '▪ 주어진 원에서 원의 중심, 반지름, 지름을 찾을 수 있다.',
+  '세부 점검 요소': '- 원의 중심, 반지름, 지름을 알아볼 수 있다.<br>- 원의 중심, 반지름, 지름의 관계를 이해한다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '4',
+  '점검 항목': '▪ 각을 알고, 직각을 찾을 수 있다.',
+  '세부 점검 요소': '- 각과 직각을 안다.<br>- 도형에서 각과 직각을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '4',
+  '점검 항목': '▪ 예각과 둔각을 구별할 수 있다.',
+  '세부 점검 요소': '- 예각과 둔각의 뜻을 안다.<br>- 직각과 비교하여 예각과 둔각을 구별할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '4',
+  '점검 항목': '▪ 이등변삼각형을 알고, 주어진 삼각형에서 이등변삼각형을 찾을 수 있다.',
+  '세부 점검 요소': '- 이등변삼각형을 안다.<br>- 주어진 삼각형에서 이등변삼각형을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '4',
+  '점검 항목': '▪ 정삼각형을 알고, 주어진 삼각형에서 정삼각형을 찾을 수 있다.',
+  '세부 점검 요소': '- 정삼각형을 안다.<br>- 주어진 삼각형에서 정삼각형을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '4',
+  '점검 항목': '▪ 직각삼각형, 예각삼각형, 둔각삼각형을 알고, 구별할 수 있다.',
+  '세부 점검 요소': '- 삼각형을 각의 크기에 따라 분류할 수 있다.<br>- 주어진 삼각형에서 직각삼각형, 예각삼각형, 둔각삼각형을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '4',
+  '점검 항목': '▪ 직사각형을 알고, 주어진 사각형에서 직사각형을 찾을 수 있다.',
+  '세부 점검 요소': '- 직사각형을 안다.<br>- 주어진 사각형에서 직사각형을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '4',
+  '점검 항목': '▪ 정사각형을 알고, 주어진 사각형에서 정사각형을 찾을 수 있다.',
+  '세부 점검 요소': '- 정사각형을 안다.<br>- 주어진 사각형에서 정사각형을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '4',
+  '점검 항목': '▪ 사다리꼴, 평행사변형, 마름모를 알고, 주어진 사각형에서 사다리꼴, 평행사변형, 마름모를 찾을 수 있다.',
+  '세부 점검 요소': '- 사다리꼴, 평행사변형, 마름모를 안다.<br>- 주어진 사각형에서 사다리꼴, 평행사변형, 마름모를 찾을 수 있따.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형의 성질',
+  '학년': '4',
+  '점검 항목': '▪ 주어진 도형에서 다각형과 정다각형을 찾을 수 있다.',
+  '세부 점검 요소': '- 다각형과 정다각형을 안다.<br>- 주어진 도형에서 다각형과 정다각형을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형 사이의 관계',
+  '학년': '4',
+  '점검 항목': '▪ 수직 또는 평행인 두 직선을 찾을 수 있다.',
+  '세부 점검 요소': '- 직선의 수직관계와 평행관계를 안다.<br>- 수직 또는 평행인 두 직선을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '평면도형 사이의 관계',
+  '학년': '5',
+  '점검 항목': '▪ 도형의 합동의 의미를 알고, 합동인 도형을 찾을 수 있다.',
+  '세부 점검 요소': '- 도형의 합동의 의미를 안다.<br>- 주어진 도형과 합동인 도형을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '입체도형의 성질',
+  '학년': '1',
+  '점검 항목': '▪ 직육면체, 원기둥, 구의 모양을 찾을 수 있다.',
+  '세부 점검 요소': '- 생활 주변에서 직육면체, 원기둥, 구의 모양을 찾을 수 있다.<br>- 주어진 입체 모양에서 직육면체, 원기둥, 구를 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '입체도형의 성질',
+  '학년': '5',
+  '점검 항목': '▪ 직육면체와 정육면체를 알고, 직육면체와 정육면체에서 면, 모서리, 꼭짓점을 찾을 수 있다.',
+  '세부 점검 요소': '- 직육면체와 정육면체의 의미와 구성 요소를 안다.<br>- 직육면체와 정육면체에서 면, 모서리, 꼭짓점을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '입체도형의 성질',
+  '학년': '5',
+  '점검 항목': '▪ 직육면체와 정육면체의 전개도를 찾을 수 있다.',
+  '세부 점검 요소': '- 직육면체와 정육면체의 전개도인 것과 아닌 것을 구별할 수 있다.<br>- 주어진 직육면체와 정육면체의 전개도를 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '입체도형의 성질',
+  '학년': '6',
+  '점검 항목': '▪ 각기둥을 알고, 각기둥에서 면, 모서리, 꼭짓점을 찾을 수 있다.',
+  '세부 점검 요소': '- 각기둥의 의미와 구성 요소를 안다.<br>- 각기둥에서 면, 모서리, 꼭짓점을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '입체도형의 성질',
+  '학년': '6',
+  '점검 항목': '▪ 각뿔을 알고, 각뿔에서 면, 모서리, 꼭짓점을 찾을 수 있다.',
+  '세부 점검 요소': '- 각뿔의 의미와 구성 요소를 안다.<br>- 각뿔에서 면, 모서리, 꼭짓점을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '입체도형의 성질',
+  '학년': '6',
+  '점검 항목': '▪ 각기둥의 전개도를 찾을 수 있다.',
+  '세부 점검 요소': '- 각기둥의 전개도인 것과 아닌 것을 구별할 수 있다.<br>- 주어진 각기둥의 전개도를 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '입체도형의 성질',
+  '학년': '6',
+  '점검 항목': '▪ 원기둥을 알고, 원기둥의 구성 요소를 찾을 수 있다.',
+  '세부 점검 요소': '- 원기둥의 의미와 구성 요소를 안다.<br>- 원기둥에서 밑면, 옆면, 높이를 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '입체도형의 성질',
+  '학년': '6',
+  '점검 항목': '▪ 원기둥의 전개도를 찾을 수 있다.',
+  '세부 점검 요소': '- 원기둥의 전개도인 것과 아닌 것을 구별할 수 있다.<br>- 주어진 원기둥의 전개도를 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '입체도형의 성질',
+  '학년': '6',
+  '점검 항목': '▪ 원뿔을 알고, 원뿔의 구성 요소를 찾을 수 있다.',
+  '세부 점검 요소': '- 원뿔의 의미와 구성 요소를 안다.<br>- 원뿔에서 밑면, 옆면, 높이, 모선을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '입체도형의 성질',
+  '학년': '6',
+  '점검 항목': '▪ 구를 알고, 구의 구성 요소를 찾을 수 있다.',
+  '세부 점검 요소': '- 구의 의미와 구성 요소를 안다.<br>- 구에서 중심, 반지름을 찾을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '1',
+  '점검 항목': '▪ 구체물의 길이, 들이, 무게, 넓이를 각각 직관적으로 비교할 수 있다.',
+  '세부 점검 요소': '- 두 구체물의 길이, 들이, 무게, 넓이를 비교하는 방법을 안다.<br>- 두 구체물의 길이, 들이, 무게, 넓이를 비교할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '2',
+  '점검 항목': "▪ 시계를 보고 시각을 '몇 시 몇 분'까지 읽을 수 있다.",
+  '세부 점검 요소': '- 시계를 보고 ‘몇 시 몇 분’으로 읽을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '2',
+  '점검 항목': "▪ 1시간은 60분임을 알고, 시간을 '시간', '분'으로 표현할 수 있다.",
+  '세부 점검 요소': '- 1시간이 60분임을 안다.<br>- ‘몇 시간’을 ‘몇 분’으로, ‘몇 분’을 ‘몇 시간’으로 나타낼 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '2',
+  '점검 항목': '▪ 1cm와 1m의 단위를 알고, 이를 이용하여 사물의 길이를 측정할 수 있다.',
+  '세부 점검 요소': '- 1cm, 1m 단위를 안다.<br>- 자로 사물의 길이를 측정할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '2',
+  '점검 항목': '▪ 1m가 100cm임을 안다.',
+  '세부 점검 요소': '- 1m가 100cm임을 안다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '3',
+  '점검 항목': '▪ 1분은 60초임을 알고, 시각을 초 단위까지 읽을 수 있다.',
+  '세부 점검 요소': '- 1분이 60초임을 안다.<br>- 시계를 보고 초 단위까지 시각을 읽을 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '3',
+  '점검 항목': '▪ 1mm와 1km의 단위를 알고, 이를 이용하여 길이를 측정할 수 있다.',
+  '세부 점검 요소': '- 1mm, 1km 단위를 안다.<br>- 길이의 측정값을 읽고 어림할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '3',
+  '점검 항목': '▪ 1cm는 10mm임을 안다.',
+  '세부 점검 요소': '- 1cm가 10mm임을 안다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '3',
+  '점검 항목': '▪ 1km는 1000m임을 안다.',
+  '세부 점검 요소': '- 1km가 1000m임을 안다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '3',
+  '점검 항목': '▪ 1L와 1mL의 단위를 알고, 이를 이용하여 간단한 들이를 측정할 수 있다.',
+  '세부 점검 요소': '- 1L와 1mL의 단위를 안다.<br>- 들이의 측정값을 읽고 어림할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '3',
+  '점검 항목': '▪ 1L가 1000mL임을 안다.',
+  '세부 점검 요소': '- 1L가 1000mL임을 안다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '3',
+  '점검 항목': '▪ 1g와 1kg의 단위를 알고, 이를 이용하여 간단한 무게를 측정할 수 있다.',
+  '세부 점검 요소': '- 1g, 1kg 단위를 안다.<br>- 무게를 kg과 g를 이용하여 측정하고 어림할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '3',
+  '점검 항목': '▪ 1kg이 1000g, 1t이 1000kg임을 안다.',
+  '세부 점검 요소': '- 1kg이 1000g임을 안다.<br>- 1t이 1000kg임을 안다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '양의 측정',
+  '학년': '4',
+  '점검 항목': '▪ 1도(°)를 알고, 각도기를 이용하여 간단한 각의 크기를 측정할 수 있다. ',
+  '세부 점검 요소': '- 각도의 단위인 도(°)를 안다.<br>- 각도기를 이용하여 간단한 각의 크기를 측정할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '4',
+  '점검 항목': '▪ 삼각형과 사각형의 내각의 크기의 합이 각각 180°, 360°임을 말할 수 있다.',
+  '세부 점검 요소': '- 삼각형의 내각의 합이 180°임을 말할 수 있다.<br>- 사각형의 내각의 합이 360°임을 말할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '5',
+  '점검 항목': '▪ 직사각형과 정사각형의 둘레를 구할 수 있다.',
+  '세부 점검 요소': '- 둘레의 의미를 안다.<br>- 삼각형의 둘레의 길이를 구할 수 있다.<br>- 사각형의 둘레의 길이를 구할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '5',
+  '점검 항목': '▪ 넓이 단위 1cm², 1m², 1km²를 안다.',
+  '세부 점검 요소': '- 1cm², 1m², 1km²의 단위를 안다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '5',
+  '점검 항목': '▪ 직사각형과 정사각형의 넓이를 구할 수 있다.',
+  '세부 점검 요소': '- 정사각형의 넓이를 구할 수 있다.<br>- 직사각형의 넓이를 구할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '5',
+  '점검 항목': '▪ 삼각형의 넓이를 구할 수 있다.',
+  '세부 점검 요소': '- 삼각형의 넓이를 구할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '5',
+  '점검 항목': '▪ 평행사변형의 넓이를 구할 수 있다.',
+  '세부 점검 요소': '- 평행사변형의 넓이를 구할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '6',
+  '점검 항목': '▪ 원주율을 알고, 원주를 구할 수 있다.',
+  '세부 점검 요소': '- 원주율을 안다.<br>- 원주와 지름 사이의 관계를 알고, 원주를 구할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '6',
+  '점검 항목': '▪ 원의 넓이를 구할 수 있다.',
+  '세부 점검 요소': '- 원의 넓이를 구할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '6',
+  '점검 항목': '▪ 직육면체와 정육면체의 겉넓이를 구할 수 있다.',
+  '세부 점검 요소': '- 직육면체의 겉넓이를 구할 수 있다.<br>- 정육면체의 겉넓이를 구할 수 있다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '6',
+  '점검 항목': '▪ 부피 단위 1cm³, 1m³를 안다.',
+  '세부 점검 요소': '- 1cm³, 1m³의 단위를 안다.'},
+ {'영역': '도형과 측정',
+  '핵심 요소': '도형의 측정',
+  '학년': '6',
+  '점검 항목': '▪ 직육면체와 정육면체의 부피를 구할 수 있다.',
+  '세부 점검 요소': '- 직육면체의 부피를 구할 수 있다.<br>- 정육면체의 부피를 구할 수 있다.'},
+ {'영역': '자료와 가능성',
+  '핵심 요소': '자료의 수집/정리/해석',
+  '학년': '2',
+  '점검 항목': '▪ 생활 주변에 있는 사물들을 정해진 기준으로 분류하여 셀 수 있다. ',
+  '세부 점검 요소': '- 여러 가지 사물을 정해진 기준에 따라 분류할 수 있다.<br>- 기준에 따라 분류한 사물의 개수를 셀 수 있다.'},
+ {'영역': '자료와 가능성',
+  '핵심 요소': '자료의 수집/정리/해석',
+  '학년': '2',
+  '점검 항목': '▪ 자료를 정해진 기준에 따라 분류하여 표로 나타낼 수 있다. ',
+  '세부 점검 요소': '- 정해진 기준에 따라 자료를 분류할 수 있다.<br>- 분류된 자료를 보고 표를 완성할 수 있다.'},
+ {'영역': '자료와 가능성',
+  '핵심 요소': '자료의 수집/정리/해석',
+  '학년': '2',
+  '점검 항목': '▪ 분류된 자료를 ○, ×, / 등을 이용하여 그래프로 나타낼 수 있다.',
+  '세부 점검 요소': '- 자료가 정리된 표를 보고 O, X, / 등을 이용한 그래프를 완성할 수 있다.'},
+ {'영역': '자료와 가능성',
+  '핵심 요소': '자료의 수집/정리/해석',
+  '학년': '3',
+  '점검 항목': '▪ 그림그래프를 완성하고, 그래프에서 간단한 사실을 찾을 수 있다.',
+  '세부 점검 요소': '- 그림그래프를 나타내는 방법을 알고, 완성할 수 있다.<br>- 그림그래프에서 간단한 사실을 찾을 수 있다.'},
+ {'영역': '자료와 가능성',
+  '핵심 요소': '자료의 수집/정리/해석',
+  '학년': '4',
+  '점검 항목': '▪ 막대그래프를 완성하고, 그래프에서 간단한 사실을 찾을 수 있다.',
+  '세부 점검 요소': '- 자료를 막대그래프로 나타내는 방법을 알고, 완성할 수 있다.<br>- 막대그래프를 보고 간단한 사실을 찾을 수 있다.'},
+ {'영역': '자료와 가능성',
+  '핵심 요소': '자료의 수집/정리/해석',
+  '학년': '4',
+  '점검 항목': '▪ 꺾은선그래프를 완성하고, 그래프에서 간단한 사실을 찾을 수 있다.',
+  '세부 점검 요소': '- 자료를 꺾은선그래프로 나타내는 방법을 알고, 완성할 수 있다.<br>- 꺾은선그래프를 보고 간단한 사실을 찾을 수 있다.'},
+ {'영역': '자료와 가능성',
+  '핵심 요소': '자료의 수집/정리/해석',
+  '학년': '6',
+  '점검 항목': '▪ 주어진 자료를 띠그래프나 원그래프로 나타내고, 그래프에서 간단한 사실을 찾을 수 있다. ',
+  '세부 점검 요소': '- 띠그래프를 나타내는 방법을 알고, 완성할 수 있다.<br>- 원그래프를 나타내는 방법을 알고, 완성할 수 있다.'},
+ {'영역': '자료와 가능성',
+  '핵심 요소': '자료의 수집/정리/해석',
+  '학년': '6',
+  '점검 항목': '▪ 간단한 자료의 평균을 구할 수 있다.',
+  '세부 점검 요소': '- 평균의 의미를 안다.<br>- 평균을 구하는 방법을 알고 평균을 구할 수 있다.'},
+ {'영역': '자료와 가능성',
+  '핵심 요소': '가능성',
+  '학년': '5',
+  '점검 항목': '▪ 간단한 사건에 대하여 사건이 일어날 가능성을 0, 1/2, 1로 구분할 수 있다.',
+  '세부 점검 요소': '- 간단한 사건이 일어날 가능성을 0, 1/2, 1로 구분하여 비교할 수 있다.'}
+];
+
+function generateTable() {
+    const tbody = document.getElementById('tableBody');
+    const checkedGrades = Array.from(document.querySelectorAll('.gradeFilter:checked')).map(cb => cb.value);
+
+    // Save previous states using key -> {selectedValue, reason}
+    
+    document.querySelectorAll("#tableBody tr").forEach(row => {
+        const tds = row.querySelectorAll("td");
+        if (tds.length < 4) return;
+        const key = tds[0].innerText.trim() + "|" + tds[1].innerText.trim() + "|" + tds[2].innerText.trim() + "|" + tds[3].innerText.trim();
+        let selectedValue = "";
+        row.querySelectorAll("input[type='radio']").forEach(input => {
+            if (input.checked) selectedValue = input.value;
+        });
+        const reasonInput = row.querySelector("input[type='text']");
+        const reason = reasonInput ? reasonInput.value.trim() : "";
+        previousStates[key] = { selectedValue, reason };
+    });
+
+    tbody.innerHTML = "";
+    const filtered = data.filter(item => checkedGrades.includes(item['학년']));
+    filtered.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        const key = item['영역'] + "|" + item['핵심 요소'] + "|" + item['학년'] + "|" + item['점검 항목'];
+        tr.innerHTML = `
+<td>${item['영역']}</td>
+<td>${item['핵심 요소']}</td>
+<td>${item['학년']}</td>
+<td style="text-align:left;">
+  <div class="tooltip">
+    ${item['점검 항목']}
+    <span class="tooltiptext">${item['세부 점검 요소']}</span>
+  </div>
+</td>
+<td><input type="radio" name="radio_${idx}" value="미도달"></td>
+<td><input type="radio" name="radio_${idx}" value="도달"></td>
+<td>
+  <div class="evidence-wrap">
+    <select class="evidence-select">
+      <option value="">선택</option>
+      <option value="① 이전 검사 결과 분석">① 이전 검사 결과 분석</option>
+      <option value="② 신규 검사 시행">② 신규 검사 시행</option>
+      <option value="③ 수행 과제 시행 및 관찰">③ 수행 과제 시행 및 관찰</option>
+      <option value="④ 수업 중 관찰">④ 수업 중 관찰</option>
+      <option value="⑤ 생활지도 중 관찰">⑤ 생활지도 중 관찰</option>
+      <option value="⑥ 기타">⑥ 기타</option>
+    </select>
+    <input type="text" class="evidence-input">
+  </div>
+</td>
+`;
+        tbody.appendChild(tr);
+
+    });
+    const rows = Array.from(document.querySelectorAll('#checklistTable tbody tr'));
+    const visible = rows.map(row => row.style.display !== 'none');
+
+    // Helper to get cell text
+    function cellText(row, idx) {
+        return row.children[idx].innerText.trim();
+    }
+
+    // mergeColumn 함수 정의
+    function mergeColumn(colIdx, sameGroup) {
+        let lastVisibleRow = null;
+        let span = 1;
+
+        rows.forEach((row, i) => {
+            const currentCell = row.children[colIdx];
+            currentCell.rowSpan = 1;
+            currentCell.style.display = "";
+
+            if (!lastVisibleRow) {
+                lastVisibleRow = row;
+                span = 1;
+                return;
+            }
+
+            if (cellText(row, colIdx) === cellText(lastVisibleRow, colIdx) && sameGroup(row, i, lastVisibleRow)) {
+                span++;
+                currentCell.style.display = "none";
+                lastVisibleRow.children[colIdx].rowSpan = span;
+            } else {
+                lastVisibleRow = row;
+                span = 1;
+            }
+        });
+    }
+
+    // 영역(col0) 병합
+    mergeColumn(0, ()=>true);
+    // 하위요소(col1) 병합 – 같은 영역 내에서만
+    mergeColumn(1, (row,i,lastRow)=> cellText(row,0)===cellText(lastRow,0));
+    // 학년(col2) 병합 – 같은 영역·하위요소 내에서만
+    mergeColumn(2, (row,i,lastRow)=> cellText(row,0)===cellText(lastRow,0) && cellText(row,1)===cellText(lastRow,1));
+
+}
+
+function resetFilter() {
+    location.reload(); // 페이지를 새로고침하여 병합된 셀 구조 유지 및 입력값 완전 초기화
+}
+
+document.addEventListener('DOMContentLoaded', generateTable);
+
+
+function exportExcel() {
+    const wb = XLSX.utils.book_new();
+    const ws_data = [["영역","핵심 요소","학년","점검 항목","미도달","도달","평정 근거"]];
+
+    const rows = document.querySelectorAll("#tableBody tr");
+    let currentArea = "";
+    let currentGrade = "";
+
+    rows.forEach(row => {
+        if (row.style.display === "none") return;
+
+        const tds = row.querySelectorAll("td");
+        if (tds.length < 7) return;
+
+        const areaText = tds[0].innerText.trim();
+        if (areaText !== "") currentArea = areaText;
+
+        const coreText = tds[1].innerText.trim();
+        if (coreText !== "") currentCore = coreText;
+
+        const gradeText = tds[2].innerText.trim();
+        if (gradeText !== "") currentGrade = gradeText;
+
+        const content = tds[3].innerText.trim();
+
+        const levelIndicators = [];
+        for (let i = 4; i <= 5; i++) {
+            const input = tds[i].querySelector("input[type='radio']");
+            levelIndicators.push(input && input.checked ? "V" : "");
+        }
+
+        const select = tds[6].querySelector("select");
+        const reasonInput = tds[6].querySelector("input[type='text']");
+        const reason = (select ? select.value : "") + ": " + (reasonInput ? reasonInput.value.trim() : "");
+
+        ws_data.push([
+            currentArea,
+            currentCore,
+            currentGrade,
+            content,
+            ...levelIndicators,
+            reason
+        ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, "수리력 향상 점검 도구");
+    XLSX.writeFile(wb, "수리력_향상_점검_결과.xlsx");
+}
+
+</script>
+
+
+<script>
+// Enhancement for preserving radio/text inputs when applying filter
+
+function saveCurrentState() {
+    const states = {};
+    document.querySelectorAll('#checklistTable tbody tr').forEach((row, index) => {
+        const radios = row.querySelectorAll('input[type="radio"]');
+        radios.forEach(radio => {
+            if (radio.checked) {
+                states[`radio_${index}`] = radio.value;
+            }
+        });
+        const select = row.querySelector('select');
+        if (select) {
+            states[`select_${index}`] = select.value;
+        }
+    });
+    return states;
+}
+
+function restoreState(states) {
+    document.querySelectorAll('#checklistTable tbody tr').forEach((row, index) => {
+        const radios = row.querySelectorAll('input[type="radio"]');
+        radios.forEach(radio => {
+            if (states[`radio_${index}`] && radio.value === states[`radio_${index}`]) {
+                radio.checked = true;
+            }
+        });
+        const select = row.querySelector('select');
+        if (select && states[`select_${index}`] !== undefined) {
+            select.value = states[`select_${index}`];
+        }
+    });
+}
+
+function applyFilter() {
+    const previousStates = saveCurrentState();
+
+    const selectedGrades = Array.from(document.querySelectorAll('.gradeFilter:checked')).map(cb => cb.value);
+
+    const rows = Array.from(document.querySelectorAll('#checklistTable tbody tr'));
+
+    // 필터 적용
+    rows.forEach(row => {
+        const grade = row.children[2].textContent.trim();
+        if (selectedGrades.includes(grade)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    restoreState(previousStates);
+
+    // 병합 전 초기화
+    rows.forEach(row => {
+        for (let cell of row.cells) {
+            cell.rowSpan = 1;
+            cell.style.display = "";
+        }
+    });
+
+    // Helper
+    function cellText(row, idx) {
+        return row.children[idx].innerText.trim();
+    }
+
+    const visible = rows.map(row => row.style.display !== 'none');
+
+    // 병합 함수
+    function mergeColumn(colIdx, sameGroup) {
+        let lastVisibleRow = null;
+        let span = 1;
+
+        rows.forEach((row, i) => {
+            if (!visible[i]) return;
+
+            const currentCell = row.children[colIdx];
+            if (!lastVisibleRow) {
+                lastVisibleRow = row;
+                span = 1;
+                return;
+            }
+
+            if (cellText(row, colIdx) === cellText(lastVisibleRow, colIdx) && sameGroup(row, i, lastVisibleRow)) {
+                span++;
+                currentCell.style.display = "none";
+                lastVisibleRow.children[colIdx].rowSpan = span;
+            } else {
+                lastVisibleRow = row;
+                span = 1;
+            }
+        });
+    }
+
+    // 영역(col0) 병합
+    mergeColumn(0, ()=>true);
+    // 하위요소(col1) 병합 – 같은 영역 내에서만
+    mergeColumn(1, (row,i,lastRow)=> cellText(row,0)===cellText(lastRow,0));
+    // 학년(col2) 병합 – 같은 영역·하위요소 내에서만
+    mergeColumn(2, (row,i,lastRow)=> cellText(row,0)===cellText(lastRow,0) && cellText(row,1)===cellText(lastRow,1));
+
+}
+</script>
+
+<script>
+(function(){
+  function setHeadHeights(){
+    const table = document.querySelector('.table-wrap table.pretty');
+    if(!table) return;
+    const row1 = table.querySelector('thead tr:nth-child(1)');
+    const h1 = row1 ? row1.getBoundingClientRect().height : 0;
+    document.documentElement.style.setProperty('--headRow1H', h1 + 'px');
+
+    /* 컨테이너 내부 sticky이므로 보통 0px 유지.
+       만약 .table-wrap 안쪽에 추가 고정바가 있다면 그 높이를 stickyTop에 더하세요.
+       document.documentElement.style.setProperty('--stickyTop', '0px'); */
+  }
+
+  // 초기 설정
+  setHeadHeights();
+
+  // 글꼴/창 크기/줄바꿈 변화 대응
+  const ro = new ResizeObserver(setHeadHeights);
+  ro.observe(document.documentElement);
+  window.addEventListener('load', setHeadHeights);
+})();
+</script>
+</body>
+
+</html>
